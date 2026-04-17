@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-path name="external_downloads" path="Download/SmartScan/" />
+    <external-files-path name="external_app_files" path="SmartScan/" />
+    <files-path name="app_files" path="SmartScan/" />
+    <cache-path name="cache" path="." />
+    <external-cache-path name="external_cache" path="." />
+</paths>
