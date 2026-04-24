@@ -7,7 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:smart_scan/features/scan/data/services/ocr_service.dart';
+import 'package:smart_scan/features/scan/data/repositories/scan_repository.dart';
 import 'package:smart_scan/core/services/feedback_service.dart';
+import 'package:smart_scan/core/services/connectivity_service.dart';
 import 'package:smart_scan/shared/widgets/buttons.dart';
 import '../../../../l10n/app_localizations.dart';
 
@@ -27,6 +29,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
   String _selectedTargetLanguage = 'fr';
   bool _isTranslating = false;
   bool _isPickingImage = false;
+  bool _isSavingTranslation = false;
   String? _pickedImagePath;
   OnDeviceTranslator? _translator;
 
@@ -68,6 +71,34 @@ class _TranslationScreenState extends State<TranslationScreen> {
     super.initState();
     _sourceController = TextEditingController(text: widget.initialText ?? '');
     _targetController = TextEditingController();
+
+    // Preload translator for default language pair only (in background)
+    // Avoids downloading all 9 languages which causes slowdown
+    _preloadTranslator();
+  }
+
+  /// Download specific language model in background WITHOUT blocking UI.
+  /// Fire-and-forget: doesn't update UI or wait for download.
+  void _downloadModelInBackground(String langCode) {
+    // Use Future.delayed to ensure the task is queued properly
+    Future.delayed(Duration.zero, () async {
+      try {
+        final modelManager = OnDeviceTranslatorModelManager();
+        final isReady = await modelManager
+            .isModelDownloaded(langCode)
+            .timeout(const Duration(seconds: 1), onTimeout: () => false);
+        if (!isReady) {
+          debugPrint('⏳ Downloading model for $langCode...');
+          await modelManager.downloadModel(langCode).timeout(
+                const Duration(minutes: 5),
+              );
+          debugPrint('✅ Downloaded model for $langCode');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not download $langCode: $e');
+        // Silently fail - user can use online translation
+      }
+    });
   }
 
   @override
@@ -140,13 +171,17 @@ class _TranslationScreenState extends State<TranslationScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: Theme.of(ctx).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text(
+              Text(
                 'Select Image Source',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(ctx).textTheme.titleLarge?.color,
+                ),
               ),
               const SizedBox(height: 12),
               ListTile(
@@ -231,14 +266,14 @@ class _TranslationScreenState extends State<TranslationScreen> {
 
       if (sourceLang == null || targetLang == null) return;
 
-      // Check if models are available offline
+      // Quick check if models are available (fail fast - 1 sec timeout)
       final modelManager = OnDeviceTranslatorModelManager();
       final srcReady = await modelManager
           .isModelDownloaded(sourceLang.bcpCode)
-          .timeout(const Duration(seconds: 5), onTimeout: () => false);
+          .timeout(const Duration(seconds: 1), onTimeout: () => false);
       final tgtReady = await modelManager
           .isModelDownloaded(targetLang.bcpCode)
-          .timeout(const Duration(seconds: 5), onTimeout: () => false);
+          .timeout(const Duration(seconds: 1), onTimeout: () => false);
 
       if (srcReady && tgtReady) {
         // Models available – preload translator
@@ -248,6 +283,10 @@ class _TranslationScreenState extends State<TranslationScreen> {
           targetLanguage: targetLang,
         );
         _translatorCache[cacheKey] = _translator!;
+      } else {
+        // Models not available - download them in background (don't block UI)
+        if (!srcReady) _downloadModelInBackground(sourceLang.bcpCode);
+        if (!tgtReady) _downloadModelInBackground(targetLang.bcpCode);
       }
     } catch (_) {
       // Silently fail; will retry during actual translation
@@ -260,9 +299,9 @@ class _TranslationScreenState extends State<TranslationScreen> {
 
   // ─── Translation ──────────────────────────────────────────────────────────
 
-  /// Entry point: tries the free MyMemory REST API first (no downloads, works
-  /// on mobile data), then falls back to on-device ML Kit if there is no
-  /// internet connection.
+  /// Entry point: Smart strategy based on connectivity
+  /// - No internet: Use offline ML Kit directly (fast, no timeout)
+  /// - Has internet: Try online API first, then fall back to offline
   Future<void> _translate() async {
     final text = _sourceController.text.trim();
     if (text.isEmpty) {
@@ -278,36 +317,60 @@ class _TranslationScreenState extends State<TranslationScreen> {
     _targetController.clear();
 
     try {
-      _setStatus('Translating…');
-
       String result;
 
-      // ── Strategy 1: MyMemory REST API (instant, no model download) ────────
-      try {
-        result = await _translateViaApi(
-          text,
-          _selectedSourceLanguage,
-          _selectedTargetLanguage,
-        );
-        _setStatus('Translation complete ✓');
-        FeedbackService().onSuccess();
-      } on SocketException {
-        // No internet – fall through to offline ML Kit
-        _setStatus('No internet – trying offline engine…');
+      // Check internet connectivity first
+      final hasInternet = await ConnectivityService().hasInternetConnection();
+
+      if (!hasInternet) {
+        // ── NO INTERNET: Use offline translation directly ──────────────────
+        debugPrint('📡 No internet detected - using offline translation');
+        _setStatus('⏳ Offline mode: translating…');
         result = await _translateOffline(
           text,
           _selectedSourceLanguage,
           _selectedTargetLanguage,
         );
-        _setStatus('Translation complete ✓ (offline)');
-        FeedbackService().onSuccess();
+        _setStatus('✓ Offline translation complete');
+        await FeedbackService().onSuccess();
+      } else {
+        // ── HAS INTERNET: Try online first, then offline fallback ──────────
+        _setStatus('Translating…');
+        try {
+          debugPrint('📡 Internet available - trying online translation');
+          result = await _translateViaApi(
+            text,
+            _selectedSourceLanguage,
+            _selectedTargetLanguage,
+          ).timeout(const Duration(seconds: 5));
+          _setStatus('✓ Translation complete');
+          await FeedbackService().onSuccess();
+        } catch (onlineError) {
+          debugPrint(
+              'Online translation failed: $onlineError - trying offline');
+          // Online failed or timed out - try offline
+          try {
+            _setStatus('⏳ Using offline translation…');
+            result = await _translateOffline(
+              text,
+              _selectedSourceLanguage,
+              _selectedTargetLanguage,
+            );
+            _setStatus('✓ Offline translation done');
+            await FeedbackService().onSuccess();
+          } catch (offlineError) {
+            // Both failed - give helpful error
+            throw Exception('Translation unavailable. '
+                'No internet - connect to WiFi for online translation.');
+          }
+        }
       }
 
       if (mounted) {
         setState(() => _targetController.text = result);
       }
     } catch (e) {
-      FeedbackService().onError();
+      await FeedbackService().onError();
       final msg = _friendlyError(e);
       _setStatus(msg, isError: true);
       if (mounted) _showError(msg);
@@ -354,6 +417,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
   }
 
   /// Performs a single MyMemory API call for one chunk of text.
+  /// Uses short timeouts to fail fast if no internet.
   Future<String> _apiChunk(String text, String src, String tgt) async {
     final uri = Uri.https(
       'api.mymemory.translated.net',
@@ -361,20 +425,19 @@ class _TranslationScreenState extends State<TranslationScreen> {
       {'q': text, 'langpair': '$src|$tgt'},
     );
 
-    final client = HttpClient()
-      ..connectionTimeout = const Duration(seconds: 15);
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 3);
     try {
       final request =
-          await client.getUrl(uri).timeout(const Duration(seconds: 15));
+          await client.getUrl(uri).timeout(const Duration(seconds: 3));
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
 
       final response =
-          await request.close().timeout(const Duration(seconds: 20));
+          await request.close().timeout(const Duration(seconds: 5));
 
       final body = await response
           .transform(const Utf8Decoder())
           .join()
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 5));
 
       final data = jsonDecode(body) as Map<String, dynamic>;
       final status = data['responseStatus'];
@@ -397,27 +460,45 @@ class _TranslationScreenState extends State<TranslationScreen> {
   // ── ML Kit offline fallback ───────────────────────────────────────────────
 
   /// Offline fallback using on-device ML Kit models.
-  /// Only downloads a model if it is already on the device; never blocks on
-  /// a fresh download so the offline path is truly instant.
+  /// If models aren't available, tries to download them.
   Future<String> _translateOffline(String text, String src, String tgt) async {
     final sourceLang = _languageCodes[src]!;
     final targetLang = _languageCodes[tgt]!;
 
     final modelManager = OnDeviceTranslatorModelManager();
+
+    // Quick check (2 sec timeout) if models exist - fail fast if not
     final srcReady = await modelManager
         .isModelDownloaded(sourceLang.bcpCode)
-        .timeout(const Duration(seconds: 8), onTimeout: () => false);
+        .timeout(const Duration(seconds: 2), onTimeout: () => false);
     final tgtReady = await modelManager
         .isModelDownloaded(targetLang.bcpCode)
-        .timeout(const Duration(seconds: 8), onTimeout: () => false);
+        .timeout(const Duration(seconds: 2), onTimeout: () => false);
 
     if (!srcReady || !tgtReady) {
-      throw Exception(
-          'Offline translation not available: language models are not yet '
-          'downloaded. Please connect to the internet and try again.');
+      // Models not available - try to download them NOW
+      try {
+        _setStatus('⏳ Downloading translation models...');
+        if (!srcReady) {
+          debugPrint('Downloading model for ${sourceLang.bcpCode}...');
+          await modelManager.downloadModel(sourceLang.bcpCode).timeout(
+                const Duration(minutes: 3),
+              );
+        }
+        if (!tgtReady) {
+          debugPrint('Downloading model for ${targetLang.bcpCode}...');
+          await modelManager.downloadModel(targetLang.bcpCode).timeout(
+                const Duration(minutes: 3),
+              );
+        }
+        debugPrint('✅ Models downloaded, retrying translation...');
+      } catch (e) {
+        debugPrint('Could not download models: $e');
+        throw Exception('Models not available - use internet for translation');
+      }
     }
 
-    // Use cached translator if available, otherwise create new one
+    // Use cached translator if available
     final cacheKey = '${src}_${tgt}';
     if (!_translatorCache.containsKey(cacheKey)) {
       await _translator?.close();
@@ -430,9 +511,53 @@ class _TranslationScreenState extends State<TranslationScreen> {
       _translator = _translatorCache[cacheKey];
     }
 
-    return _translator!.translateText(text).timeout(const Duration(seconds: 30),
-        onTimeout: () =>
-            throw TimeoutException('Offline translation timed out'));
+    // Translate with 10 second timeout
+    return _translator!.translateText(text).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw TimeoutException('Translation timed out'),
+        );
+  }
+
+  // ── Save Translation ───────────────────────────────────────────────────────
+
+  Future<void> _saveTranslation() async {
+    if (_sourceController.text.isEmpty || _targetController.text.isEmpty) {
+      _setStatus('Nothing to save - translate first', isError: true);
+      return;
+    }
+
+    setState(() => _isSavingTranslation = true);
+
+    try {
+      await ScanRepository().saveTranslation(
+        sourceLanguage: _selectedSourceLanguage,
+        targetLanguage: _selectedTargetLanguage,
+        originalText: _sourceController.text,
+        translatedText: _targetController.text,
+      );
+
+      if (mounted) {
+        _setStatus('✓ Translation saved to history');
+        await FeedbackService().onSuccess();
+
+        // Clear fields after saving
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            setState(() {
+              _sourceController.clear();
+              _targetController.clear();
+              _statusMessage = null;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _setStatus('Error saving: $e', isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingTranslation = false);
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -447,19 +572,27 @@ class _TranslationScreenState extends State<TranslationScreen> {
   }
 
   String _friendlyError(Object e) {
-    final s = e.toString();
-    if (s.contains('quota'))
-      return 'Translation quota reached – try again in a minute.';
-    if (s.contains('SocketException') || s.contains('internet')) {
-      return 'No internet connection. Connect to the internet and try again.';
+    final s = e.toString().toLowerCase();
+
+    // Check for connection issues
+    if (s.contains('socket') || s.contains('failed host lookup')) {
+      return '📡 No internet - connect to WiFi for translation';
     }
-    if (s.contains('TimeoutException') || s.contains('timed out')) {
-      return 'Translation timed out. Check your connection and try again.';
+    if (s.contains('timeout') || s.contains('timed out')) {
+      return '⏱️ Connection too slow - try again';
     }
-    if (s.contains('not yet downloaded')) {
-      return 'Offline models not available. Please connect to the internet.';
+    // Check for offline model issues
+    if (s.contains('model') || s.contains('not available')) {
+      return '📥 Offline models not downloaded - use internet';
     }
-    return 'Translation failed. Please try again.';
+    if (s.contains('unsupported') || s.contains('language')) {
+      return 'Language pair not supported';
+    }
+    if (s.contains('unavailable')) {
+      return '📡 No internet - connect to WiFi for translation';
+    }
+
+    return 'Translation failed - try again';
   }
 
   void _swapLanguages() {
@@ -472,6 +605,12 @@ class _TranslationScreenState extends State<TranslationScreen> {
       _targetController.text = tmpText;
     });
     _preloadTranslator();
+  }
+
+  /// Get save button label based on application language
+  String _getSaveButtonLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return l10n?.save_scan ?? 'Save';
   }
 
   Future<void> _copyToClipboard(String text) async {
@@ -496,6 +635,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(l10n?.translation_settings ?? 'Translation'),
         elevation: 0,
@@ -538,7 +678,10 @@ class _TranslationScreenState extends State<TranslationScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.indigo.shade200),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .primaryColor
+                          .withValues(alpha: 0.3)),
                 ),
                 child: Stack(
                   children: [
@@ -580,14 +723,18 @@ class _TranslationScreenState extends State<TranslationScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.indigo[50],
+                    color:
+                        Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.indigo.shade200),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .primaryColor
+                            .withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
                       Icon(Icons.add_photo_alternate,
-                          color: Colors.indigo[600]),
+                          color: Theme.of(context).primaryColor),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -597,18 +744,24 @@ class _TranslationScreenState extends State<TranslationScreen> {
                               'Import Image for OCR',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
-                                color: Colors.indigo[700],
+                                color: Theme.of(context).primaryColor,
                               ),
                             ),
                             Text(
                               'Pick from gallery, files, USB or SD card',
                               style: TextStyle(
-                                  fontSize: 12, color: Colors.indigo[400]),
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.7)),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.chevron_right, color: Colors.indigo[400]),
+                      Icon(Icons.chevron_right,
+                          color: Theme.of(context)
+                              .primaryColor
+                              .withValues(alpha: 0.7)),
                     ],
                   ),
                 ),
@@ -652,6 +805,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
           ),
 
           // ── Source text + Target text (side by side on wide screens) ─
+          // ── Source text + Target text ─
           Expanded(
             child: LayoutBuilder(builder: (context, constraints) {
               final isWide = constraints.maxWidth > 600;
@@ -665,7 +819,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
                             readOnly: false,
                             onCopy: () =>
                                 _copyToClipboard(_sourceController.text))),
-                    Container(width: 1, color: Colors.grey[300]),
+                    Container(width: 1, color: Theme.of(context).dividerColor),
                     Expanded(
                         child: _textPanel(
                             label: 'Translated Text',
@@ -676,7 +830,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
                   ],
                 );
               }
-              // Narrow: vertical stacked
               return Column(
                 children: [
                   Expanded(
@@ -686,7 +839,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
                           readOnly: false,
                           onCopy: () =>
                               _copyToClipboard(_sourceController.text))),
-                  Container(height: 1, color: Colors.grey[300]),
+                  Container(height: 1, color: Theme.of(context).dividerColor),
                   Expanded(
                       child: _textPanel(
                           label: 'Translated Text',
@@ -699,99 +852,145 @@ class _TranslationScreenState extends State<TranslationScreen> {
             }),
           ),
 
-          // ── Action buttons ───────────────────────────────────────────
-          Container(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 8,
-              bottom: MediaQuery.of(context).padding.bottom + 12,
-            ),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Status message (translating / error / done)
-                if (_statusMessage != null)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _statusIsError ? Colors.red[50] : Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
+// ── Action buttons ───────────────────────────────────────────
+          SafeArea(
+            top: false,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Status message (translating / error / done)
+                  if (_statusMessage != null)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
                         color: _statusIsError
-                            ? Colors.red.shade200
-                            : Colors.green.shade200,
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _statusIsError
+                              ? Colors.red.withValues(alpha: 0.3)
+                              : Colors.green.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _statusIsError
+                                ? Icons.error_outline
+                                : (_isTranslating
+                                    ? Icons.sync
+                                    : Icons.check_circle_outline),
+                            size: 16,
+                            color: _statusIsError
+                                ? Colors.red[700]
+                                : Colors.green[700],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _statusMessage!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _statusIsError
+                                    ? Colors.red[700]
+                                    : Colors.green[700],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _statusIsError
-                              ? Icons.error_outline
-                              : (_isTranslating
-                                  ? Icons.sync
-                                  : Icons.check_circle_outline),
-                          size: 16,
-                          color: _statusIsError
-                              ? Colors.red[700]
-                              : Colors.green[700],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: SmartElevatedButton(
+                            onPressed: _isTranslating ? null : _translate,
+                            style: ElevatedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            icon: _isTranslating
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.translate),
+                            isLoading: _isTranslating,
+                            child: Text(
+                              _isTranslating
+                                  ? (AppLocalizations.of(context)?.processing ??
+                                      'Translating…')
+                                  : (AppLocalizations.of(context)
+                                          ?.action_translation ??
+                                      'Translate'),
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
                         ),
+                      ),
+                      if (_targetController.text.isNotEmpty) ...[
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            _statusMessage!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _statusIsError
-                                  ? Colors.red[700]
-                                  : Colors.green[700],
+                          child: SizedBox(
+                            height: 48,
+                            child: SmartElevatedButton(
+                              onPressed: _isSavingTranslation
+                                  ? null
+                                  : _saveTranslation,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: _isSavingTranslation
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white),
+                                    )
+                                  : const Icon(Icons.save),
+                              isLoading: _isSavingTranslation,
+                              child: Text(
+                                _isSavingTranslation
+                                    ? (AppLocalizations.of(context)
+                                            ?.processing ??
+                                        'Saving…')
+                                    : _getSaveButtonLabel(context),
+                                style: const TextStyle(fontSize: 16),
+                              ),
                             ),
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: SmartElevatedButton(
-                    onPressed: _isTranslating ? null : _translate,
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: _isTranslating
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Icon(Icons.translate),
-                    isLoading: _isTranslating,
-                    child: Text(
-                      _isTranslating ? 'Translating…' : 'Translate',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          )
         ],
       ),
     );
@@ -825,21 +1024,25 @@ class _TranslationScreenState extends State<TranslationScreen> {
           ),
           const SizedBox(height: 6),
           Expanded(
-            child: TextField(
-              controller: controller,
-              maxLines: null,
-              expands: true,
-              readOnly: readOnly,
-              textAlignVertical: TextAlignVertical.top,
-              decoration: InputDecoration(
-                hintText: readOnly
-                    ? 'Translation will appear here...'
-                    : 'Enter text or import an image...',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                filled: readOnly,
-                fillColor: readOnly ? Colors.grey[50] : Colors.transparent,
-                contentPadding: const EdgeInsets.all(12),
+            child: ClipRect(
+              child: TextField(
+                controller: controller,
+                maxLines: null,
+                expands: true,
+                readOnly: readOnly,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: InputDecoration(
+                  hintText: readOnly
+                      ? 'Translation will appear here...'
+                      : 'Enter text or import an image...',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  filled: readOnly,
+                  fillColor: readOnly
+                      ? Theme.of(context).cardColor
+                      : Colors.transparent,
+                  contentPadding: const EdgeInsets.all(12),
+                ),
               ),
             ),
           ),
@@ -868,11 +1071,13 @@ class _LanguageDropdown extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+        Text(label,
+            style: TextStyle(fontSize: 11, color: Theme.of(context).hintColor)),
         DropdownButton<String>(
           value: value,
           isExpanded: true,
-          underline: Container(height: 1, color: Colors.grey[300]),
+          underline:
+              Container(height: 1, color: Theme.of(context).dividerColor),
           items: languages.entries
               .map((e) => DropdownMenuItem(
                     value: e.key,

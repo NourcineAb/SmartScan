@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'features/main/presentation/pages/main_screen.dart';
 import 'features/settings/presentation/bloc/settings_bloc.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/model_download_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,12 @@ void main() async {
   // Initialize haptic and sound managers
   await VibrationManager().initialize(prefs);
   await SoundManager().initialize(prefs);
+
+  // Download translation models in background (fire-and-forget)
+  // Use a proper delayed task to ensure it actually runs
+  Future.delayed(Duration.zero, () {
+    ModelDownloadService().downloadAllModels();
+  });
 
   runApp(
     BlocProvider(

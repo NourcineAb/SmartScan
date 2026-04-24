@@ -17,6 +17,7 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
   late TextEditingController _nameController;
   late String _selectedIcon;
   late int _selectedColor;
+  String? _errorMessage;
 
   final List<String> _iconOptions = [
     'receipt',
@@ -81,9 +82,9 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
 
   void _submit() {
     if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a category name')),
-      );
+      setState(() {
+        _errorMessage = 'Please enter a category name';
+      });
       return;
     }
 
@@ -105,6 +106,50 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Error message (appears at the top if validation fails)
+              if (_errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFEBEE),
+                    border:
+                        Border.all(color: const Color(0xFFEF5350), width: 1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Color(0xFFEF5350),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(
+                            color: Color(0xFFEF5350),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() => _errorMessage = null);
+                        },
+                        child: const Icon(
+                          Icons.close,
+                          color: Color(0xFFEF5350),
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_errorMessage != null) const SizedBox(height: 16),
+
               // Header
               Text(
                 widget.category == null ? 'New Category' : 'Edit Category',

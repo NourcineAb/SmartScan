@@ -552,6 +552,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get edit => 'تعديل';
 
   @override
+  String get save => 'حفظ';
+
+  @override
   String get view_documents => 'عرض المستندات';
 
   @override

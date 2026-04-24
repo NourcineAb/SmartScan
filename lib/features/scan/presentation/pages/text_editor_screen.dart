@@ -60,7 +60,7 @@ class _TextEditorScreenState extends State<TextEditorScreen> {
                 maxLines: null,
                 expands: true,
                 decoration: InputDecoration(
-                  hintText: 'Modifier le texte extrait...',
+                  hintText: 'Edit text...',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -88,7 +88,7 @@ class _TextEditorScreenState extends State<TextEditorScreen> {
                       Navigator.pop(context, _controller.text);
                     },
                     icon: const Icon(Icons.check),
-                    label: const Text('Valider'),
+                    label: const Text('Save'),
                   ),
                 ),
               ],

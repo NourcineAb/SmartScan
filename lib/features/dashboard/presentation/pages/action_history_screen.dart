@@ -112,6 +112,7 @@ class _ActionHistoryScreenState extends State<ActionHistoryScreen> {
     final iconMap = {
       'camera': Icons.camera_alt,
       'history': Icons.history,
+      'document_scanner': Icons.document_scanner,
       'translate': Icons.translate,
       'category': Icons.category,
       'settings': Icons.settings,

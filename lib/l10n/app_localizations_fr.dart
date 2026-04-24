@@ -560,6 +560,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get edit => 'Modifier';
 
   @override
+  String get save => 'Enregistrer';
+
+  @override
   String get view_documents => 'Voir les documents';
 
   @override

@@ -223,4 +223,60 @@ class ScanRepository {
       return null;
     }
   }
+
+  // ─── Saved Translations ─────────────────────────────────────────────────
+  /// Save a translation result
+  Future<String> saveTranslation({
+    required String sourceLanguage,
+    required String targetLanguage,
+    required String originalText,
+    required String translatedText,
+  }) async {
+    try {
+      final translationId = const Uuid().v4();
+      final translation = {
+        'id': translationId,
+        'source_language': sourceLanguage,
+        'target_language': targetLanguage,
+        'original_text': originalText,
+        'translated_text': translatedText,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      await _dbService.insertSavedTranslation(translation);
+      return translationId;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get all saved translations
+  Future<List<Map<String, dynamic>>> getAllSavedTranslations({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      return await _dbService.getAllSavedTranslations(
+          limit: limit, offset: offset);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Delete a saved translation
+  Future<void> deleteSavedTranslation(String translationId) async {
+    try {
+      await _dbService.deleteSavedTranslation(translationId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get count of saved translations
+  Future<int> getSavedTranslationCount() async {
+    try {
+      return await _dbService.getSavedTranslationCount();
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

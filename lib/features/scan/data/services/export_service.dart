@@ -97,8 +97,7 @@ class ExportService {
     required String fileName,
   }) async {
     try {
-      final content =
-          '''SmartScan - Document Exporté
+      final content = '''SmartScan - Document Exporté
 ==============================
 Langue: ${_getLanguageName(language)}
 Date: ${DateTime.now().toString().split('.')[0]}

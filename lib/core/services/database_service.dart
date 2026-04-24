@@ -123,12 +123,36 @@ class DatabaseService {
       )
     ''');
 
+    // Create saved translations table
+    await db.execute('''
+      CREATE TABLE ${AppConstants.tableSavedTranslations} (
+        id TEXT PRIMARY KEY,
+        source_language TEXT NOT NULL,
+        target_language TEXT NOT NULL,
+        original_text TEXT NOT NULL,
+        translated_text TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
     // Create default categories
     await _createDefaultCategories(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle future database upgrades here
+    // Upgrade from version 1 to 2: Add saved_translations table
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE ${AppConstants.tableSavedTranslations} (
+          id TEXT PRIMARY KEY,
+          source_language TEXT NOT NULL,
+          target_language TEXT NOT NULL,
+          original_text TEXT NOT NULL,
+          translated_text TEXT NOT NULL,
+          created_at TEXT NOT NULL
+        )
+      ''');
+    }
   }
 
   Future<void> _createDefaultCategories(Database db) async {
@@ -301,6 +325,89 @@ class DatabaseService {
     final db = await database;
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM ${AppConstants.tableScans}',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // Saved Translations operations
+  Future<String> insertSavedTranslation(
+      Map<String, dynamic> translation) async {
+    if (_isWeb()) {
+      _webStorage.putIfAbsent(AppConstants.tableSavedTranslations, () => []);
+      _webStorage[AppConstants.tableSavedTranslations]!.add(translation);
+      return translation['id'];
+    }
+    final db = await database;
+    await db.insert(
+      AppConstants.tableSavedTranslations,
+      translation,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return translation['id'];
+  }
+
+  Future<List<Map<String, dynamic>>> getAllSavedTranslations({
+    int limit = AppConstants.pageSize,
+    int offset = 0,
+  }) async {
+    if (_isWeb()) {
+      final translations =
+          _webStorage[AppConstants.tableSavedTranslations] ?? [];
+      translations.sort((a, b) => DateTime.parse(b['created_at'] as String)
+          .compareTo(DateTime.parse(a['created_at'] as String)));
+      return translations.skip(offset).take(limit).toList();
+    }
+    final db = await database;
+    return db.query(
+      AppConstants.tableSavedTranslations,
+      orderBy: 'created_at DESC',
+      limit: limit,
+      offset: offset,
+    );
+  }
+
+  Future<int> deleteSavedTranslation(String id) async {
+    if (_isWeb()) {
+      final translations =
+          _webStorage[AppConstants.tableSavedTranslations] ?? [];
+      translations.removeWhere((trans) => trans['id'] == id);
+      return 1;
+    }
+    final db = await database;
+    return db.delete(
+      AppConstants.tableSavedTranslations,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> updateSavedTranslation(String id, String newText) async {
+    if (_isWeb()) {
+      final translations =
+          _webStorage[AppConstants.tableSavedTranslations] ?? [];
+      final index = translations.indexWhere((trans) => trans['id'] == id);
+      if (index != -1) {
+        translations[index]['translated_text'] = newText;
+        return 1;
+      }
+      return 0;
+    }
+    final db = await database;
+    return db.update(
+      AppConstants.tableSavedTranslations,
+      {'translated_text': newText},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> getSavedTranslationCount() async {
+    if (_isWeb()) {
+      return _webStorage[AppConstants.tableSavedTranslations]?.length ?? 0;
+    }
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM ${AppConstants.tableSavedTranslations}',
     );
     return Sqflite.firstIntValue(result) ?? 0;
   }

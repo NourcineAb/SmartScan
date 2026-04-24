@@ -32,27 +32,56 @@ class _ScansScreenContent extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Scan'),
+        title: const Text('Supprimer le scan'),
         content: const Text(
-            'Are you sure you want to delete this scan and its image?'),
+          'Êtes-vous sûr de vouloir supprimer ce scan et son image? '
+          'Cette action est irréversible.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (confirmed == true && context.mounted) {
-      context.read<ScansBloc>().add(DeleteScanEvent(scanId: scanId));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Scan deleted'), backgroundColor: Colors.green),
-      );
+      try {
+        // Delete from repository
+        await ScanRepository().deleteScan(scanId);
+
+        if (context.mounted) {
+          // Update bloc
+          try {
+            context.read<ScansBloc>().add(DeleteScanEvent(scanId: scanId));
+          } catch (e) {
+            debugPrint('Warning: Could not access ScansBloc: $e');
+          }
+
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Scan supprimé'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -73,10 +102,11 @@ class _ScansScreenContent extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
+              final scansBloc = context.read<ScansBloc>();
               Navigator.of(context).push(
                 PageTransitionUtils.slideUpTransition<void>(
-                  builder: (context) => BlocProvider.value(
-                    value: context.read<ScansBloc>(),
+                  builder: (newContext) => BlocProvider.value(
+                    value: scansBloc,
                     child: const SearchScansScreen(),
                   ),
                   routeName: '/search-scans',

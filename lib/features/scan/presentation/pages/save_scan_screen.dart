@@ -117,10 +117,15 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
     setState(() => _isSaving = true);
 
     try {
+      // Use translated text if available, otherwise use original text
+      final textToSave = _translatedTextController.text.isNotEmpty
+          ? _translatedTextController.text
+          : _textController.text;
+
       final scanId = await ScanRepository().saveScan(
         title: title,
         imagePath: widget.imagePath,
-        rawText: _textController.text,
+        rawText: textToSave,
         categoryId: _selectedCategoryId,
       );
 
@@ -176,102 +181,107 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
       final sourceLang = _languageCodes[_sourceLanguage]!;
       final targetLang = _languageCodes[_targetLanguage]!;
 
-      // Close old translator if languages changed
+      final modelManager = OnDeviceTranslatorModelManager();
+
+      // Quick check (2 sec timeout) if models are available
+      final srcAvailable = await modelManager
+          .isModelDownloaded(sourceLang.bcpCode)
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+      final tgtAvailable = await modelManager
+          .isModelDownloaded(targetLang.bcpCode)
+          .timeout(const Duration(seconds: 2), onTimeout: () => false);
+
+      // If models not available, try to download them
+      if (!srcAvailable || !tgtAvailable) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⏳ Downloading translation models...'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+
+        // Try to download missing models
+        try {
+          if (!srcAvailable) {
+            await modelManager.downloadModel(sourceLang.bcpCode).timeout(
+                  const Duration(minutes: 5),
+                  onTimeout: () => throw TimeoutException(
+                      'Source language model download timeout - check your internet'),
+                );
+          }
+          if (!tgtAvailable) {
+            await modelManager.downloadModel(targetLang.bcpCode).timeout(
+                  const Duration(minutes: 5),
+                  onTimeout: () => throw TimeoutException(
+                      'Target language model download timeout - check your internet'),
+                );
+          }
+        } catch (downloadError) {
+          if (mounted) {
+            final msg = downloadError is TimeoutException
+                ? '⏱️ Model download too slow - try with better WiFi'
+                : '📡 Cannot download models - try later with internet';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(msg),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+          rethrow;
+        }
+      }
+
+      // Create translator and translate
       await _translator?.close();
       _translator = OnDeviceTranslator(
         sourceLanguage: sourceLang,
         targetLanguage: targetLang,
       );
 
-      // Download model if not available with timeout
-      final modelManager = OnDeviceTranslatorModelManager();
-
-      try {
-        final srcAvailable = await modelManager
-            .isModelDownloaded(sourceLang.bcpCode)
-            .timeout(const Duration(seconds: 10));
-        final tgtAvailable = await modelManager
-            .isModelDownloaded(targetLang.bcpCode)
-            .timeout(const Duration(seconds: 10));
-
-        if (!srcAvailable) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'Downloading translation model (this may take a few minutes)...'),
-                backgroundColor: Colors.blue,
-                duration: Duration(seconds: 5),
-              ),
-            );
-          }
-          await modelManager.downloadModel(sourceLang.bcpCode).timeout(
-              const Duration(minutes: 5),
-              onTimeout: () => throw TimeoutException(
-                  'Model download timeout - please check your internet connection'));
-        }
-        if (!tgtAvailable) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                    'Downloading target translation model (this may take a few minutes)...'),
-                backgroundColor: Colors.blue,
-                duration: Duration(seconds: 5),
-              ),
-            );
-          }
-          await modelManager.downloadModel(targetLang.bcpCode).timeout(
-              const Duration(minutes: 5),
-              onTimeout: () => throw TimeoutException(
-                  'Model download timeout - please check your internet connection'));
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Model error: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        throw Exception('Failed to prepare translation models: $e');
-      }
-
-      // Use Future.any() to guarantee timeout fires
-      late String result;
-      try {
-        result = await Future.any([
-          _translator!.translateText(_textController.text),
-          Future<String>.delayed(const Duration(minutes: 8), () {
-            throw TimeoutException(
-                'Translation timeout - process took too long');
-          }),
-        ]);
-      } catch (e) {
-        if (e is TimeoutException) {
-          rethrow;
-        }
-        rethrow;
-      }
+      final result =
+          await _translator!.translateText(_textController.text).timeout(
+                const Duration(seconds: 10),
+                onTimeout: () =>
+                    throw TimeoutException('Translation took too long'),
+              );
 
       if (mounted) {
         setState(() => _translatedTextController.text = result);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Translation complete!'),
+            content: Text('✓ Translation complete!'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
+        await FeedbackService().onSuccess();
       }
     } catch (e) {
       if (mounted) {
+        String errorMsg;
+        if (e is TimeoutException) {
+          errorMsg = '⏱️ Translation timeout - try with shorter text';
+        } else if (e.toString().contains('Model')) {
+          errorMsg =
+              '📥 Models not ready - use internet or try main translation screen';
+        } else if (e.toString().contains('Socket')) {
+          errorMsg = '📡 No internet - connect for translation';
+        } else {
+          errorMsg = '❌ Translation failed - try again';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Translation failed: $e'),
+            content: Text(errorMsg),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
+        await FeedbackService().onError();
       }
     } finally {
       if (mounted) setState(() => _isTranslating = false);

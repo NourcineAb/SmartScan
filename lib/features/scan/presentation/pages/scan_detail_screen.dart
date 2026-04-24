@@ -72,22 +72,32 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
       );
 
       if (mounted) {
-        // Update parent ScansBloc if available
-        context.read<ScansBloc>().add(const RefreshScansEvent());
-
-        setState(() => _isEditing = false);
+        // Show success message FIRST
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Scan mis à jour'),
             backgroundColor: Colors.green,
           ),
         );
+
+        // Then update UI and bloc
+        setState(() => _isEditing = false);
+
+        // Try to update parent ScansBloc if available (safely)
+        try {
+          if (mounted && context.mounted) {
+            context.read<ScansBloc>().add(const RefreshScansEvent());
+          }
+        } catch (e) {
+          debugPrint('Warning: Could not access ScansBloc: $e');
+          // Silently fail - bloc might not be in scope
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur: $e'),
+            content: Text('Erreur: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -125,22 +135,39 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
       try {
         await _scanRepository.deleteScan(widget.scan.id);
         if (mounted) {
-          context
-              .read<ScansBloc>()
-              .add(DeleteScanEvent(scanId: widget.scan.id));
-          Navigator.of(context).pop();
+          // Try to update bloc if available (safely)
+          try {
+            if (mounted && context.mounted) {
+              context
+                  .read<ScansBloc>()
+                  .add(DeleteScanEvent(scanId: widget.scan.id));
+            }
+          } catch (e) {
+            debugPrint('Warning: Could not access ScansBloc: $e');
+            // Silently fail - bloc might not be in scope
+          }
+
+          // Show success message BEFORE navigating back
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Scan supprimé'),
               backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
+
+          // Pop AFTER showing message
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          });
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Erreur: $e'),
+              content: Text('Erreur: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );

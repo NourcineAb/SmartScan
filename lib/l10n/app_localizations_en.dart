@@ -551,6 +551,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get edit => 'Edit';
 
   @override
+  String get save => 'Save';
+
+  @override
   String get view_documents => 'View Documents';
 
   @override

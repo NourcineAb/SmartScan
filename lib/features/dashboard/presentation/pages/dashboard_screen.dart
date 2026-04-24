@@ -7,6 +7,7 @@ import '../../../settings/presentation/bloc/settings_bloc.dart';
 import '../../../categorization/presentation/pages/categories_screen.dart';
 import '../../../translation/presentation/pages/translation_screen.dart';
 import '../../../history/presentation/pages/scans_screen.dart';
+import '../../../history/presentation/pages/history_screen.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/page_transition_utils.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -113,7 +114,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return BlocBuilder<SettingsBloc, SettingsState>(
       builder: (context, settingsState) {
         final isDarkMode = settingsState.themeMode == ThemeMode.dark;
-        final bgColor = isDarkMode ? AppColors.darkSurface : Color(0xFFE8F0FE);
         final startGradient =
             isDarkMode ? Color(0xFF3D3D5C) : Color(0xFFF0E7FF);
         final endGradient = isDarkMode ? Color(0xFF2D2D44) : Color(0xFFE8F0FE);
@@ -571,27 +571,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
       },
       {
-        'icon': Icons.history,
-        'label': l10n?.action_history ?? 'History',
-        'color': const Color(0xFFBFDBFE), // Light Blue
-        'onTap': () async {
-          await FeedbackService().onTap();
-          _recordAction(
-            actionName: 'history',
-            actionLabel: l10n?.action_history ?? 'History',
-            description: 'View scan history',
-            icon: 'history',
-          );
-          Navigator.of(context).push(
-            PageTransitionUtils.sharedAxisTransition<void>(
-              context: context,
-              builder: (context) => const ScansScreen(),
-              routeName: '/history',
-            ),
-          );
-        },
-      },
-      {
         'icon': Icons.translate,
         'label': l10n?.action_translation ?? 'Translation',
         'color': const Color(0xFFFECACA), // Warm Peach
@@ -629,6 +608,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
               context: context,
               builder: (context) => const CategoriesScreen(),
               routeName: '/categories',
+            ),
+          );
+        },
+      },
+      {
+        'icon': Icons.history,
+        'label': l10n?.action_history ?? 'History',
+        'color': const Color(0xFFC7D2FE), // Indigo
+        'onTap': () async {
+          await FeedbackService().onTap();
+          _recordAction(
+            actionName: 'history',
+            actionLabel: l10n?.action_history ?? 'History',
+            description: 'View scans and translations',
+            icon: 'history',
+          );
+          Navigator.of(context).push(
+            PageTransitionUtils.sharedAxisTransition<void>(
+              context: context,
+              builder: (context) => const HistoryScreen(),
+              routeName: '/history',
             ),
           );
         },

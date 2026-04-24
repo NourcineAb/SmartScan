@@ -5,11 +5,12 @@ class AppConstants {
 
   // Database constants
   static const String databaseName = 'smartscan.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
 
   // Table names
   static const String tableScans = 'scans';
   static const String tableCategories = 'categories';
+  static const String tableSavedTranslations = 'saved_translations';
 
   // Shared preferences keys
   static const String prefThemeMode = 'theme_mode';

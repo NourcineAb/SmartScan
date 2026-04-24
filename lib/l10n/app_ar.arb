@@ -201,8 +201,7 @@
   "category_updated": "تم تحديث الفئة",
   "category_deleted": "تم حذف الفئة",
   "confirm_delete_category": "هل أنت متأكد من أنك تريد حذف هذه الفئة؟",
-  "edit": "تعديل",
-  "view_documents": "عرض المستندات",
+  "edit": "تعديل",  "save": "حفظ",  "view_documents": "عرض المستندات",
   
   "system_language": "لغة النظام",
   "change_language": "تغيير لغة التطبيق",
