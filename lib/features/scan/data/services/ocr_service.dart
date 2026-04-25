@@ -14,6 +14,7 @@ class StructuredOCRResult {
   final List<BoundingBoxModel> elements;
   final int imageWidth;
   final int imageHeight;
+  final String imagePath;
   final bool isMock;
 
   StructuredOCRResult({
@@ -23,6 +24,7 @@ class StructuredOCRResult {
     required this.elements,
     required this.imageWidth,
     required this.imageHeight,
+    required this.imagePath,
     this.isMock = false,
   });
 
@@ -59,6 +61,7 @@ class StructuredOCRResult {
       'blocks': blocks.map((b) => b.toMap()).toList(),
       'lines': lines.map((l) => l.toMap()).toList(),
       'elements': elements.map((e) => e.toMap()).toList(),
+      'image_path': imagePath,
     };
   }
 
@@ -77,6 +80,7 @@ class StructuredOCRResult {
       elements: (map['elements'] as List? ?? [])
           .map((e) => BoundingBoxModel.fromMap(e as Map<String, dynamic>))
           .toList(),
+      imagePath: map['image_path'] as String? ?? '',
     );
   }
 }
@@ -148,16 +152,8 @@ class OCRService {
           recognizedText,
           imageWidth,
           imageHeight,
+          processImagePath,
         );
-
-        // Clean up cropped image if it was created
-        if (cropZone != null && processImagePath != imagePath) {
-          try {
-            await File(processImagePath).delete();
-          } catch (_) {
-            // Ignore errors deleting temp file
-          }
-        }
 
         return result;
       } on Exception catch (e) {
@@ -184,6 +180,7 @@ class OCRService {
     ml_kit.RecognizedText recognizedText,
     int imageWidth,
     int imageHeight,
+    String imagePath,
   ) {
     final blocks = <BoundingBoxModel>[];
     final lines = <BoundingBoxModel>[];
@@ -279,6 +276,7 @@ class OCRService {
       elements: elements,
       imageWidth: imageWidth,
       imageHeight: imageHeight,
+      imagePath: imagePath,
       isMock: false,
     );
   }
@@ -509,6 +507,7 @@ class OCRService {
       elements: elements,
       imageWidth: 1080,
       imageHeight: 1920,
+      imagePath: imagePath,
       isMock: true,
     );
   }

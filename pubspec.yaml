@@ -58,7 +58,7 @@ dependencies:
 
   # Audio & Haptics
   audioplayers: ^6.4.0
-  vibration: ^3.1.8
+  haptic_feedback: any
 
   # Localization
   intl: ^0.20.0

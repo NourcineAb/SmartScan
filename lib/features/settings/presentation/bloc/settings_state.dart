@@ -4,12 +4,14 @@ class SettingsState {
   final ThemeMode themeMode;
   final String language;
   final bool soundsEnabled;
+  final bool vibrationEnabled;
   final bool notificationsEnabled;
 
   const SettingsState({
     required this.themeMode,
     required this.language,
     required this.soundsEnabled,
+    required this.vibrationEnabled,
     required this.notificationsEnabled,
   });
 
@@ -17,12 +19,14 @@ class SettingsState {
     ThemeMode? themeMode,
     String? language,
     bool? soundsEnabled,
+    bool? vibrationEnabled,
     bool? notificationsEnabled,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       language: language ?? this.language,
       soundsEnabled: soundsEnabled ?? this.soundsEnabled,
+      vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     );
   }
@@ -35,6 +39,7 @@ class SettingsState {
           themeMode == other.themeMode &&
           language == other.language &&
           soundsEnabled == other.soundsEnabled &&
+          vibrationEnabled == other.vibrationEnabled &&
           notificationsEnabled == other.notificationsEnabled;
 
   @override
@@ -42,5 +47,6 @@ class SettingsState {
       themeMode.hashCode ^
       language.hashCode ^
       soundsEnabled.hashCode ^
+      vibrationEnabled.hashCode ^
       notificationsEnabled.hashCode;
 }

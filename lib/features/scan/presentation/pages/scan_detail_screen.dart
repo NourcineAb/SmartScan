@@ -8,6 +8,8 @@ import 'package:smart_scan/features/translation/presentation/pages/translation_s
 import 'dart:io';
 import 'package:smart_scan/core/services/database_service.dart';
 import 'package:smart_scan/core/services/feedback_service.dart';
+import 'package:flutter/services.dart';
+import 'package:smart_scan/shared/widgets/bounding_box_overlay.dart';
 
 class ScanDetailScreen extends StatefulWidget {
   final ScanModel scan;
@@ -179,7 +181,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
   Widget _buildImagePreview() {
     if (widget.scan.imagePath == null || widget.scan.imagePath!.isEmpty) {
       return Container(
-        color: Colors.grey[200],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -188,7 +190,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
               const SizedBox(height: 16),
               Text(
                 'Aucune image disponible',
-                style: TextStyle(color: Colors.grey[600]),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -206,7 +208,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return Container(
-              color: Colors.grey[200],
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -223,19 +225,41 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
       );
     } catch (e) {
       return Container(
-        color: Colors.grey[200],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: Center(child: Text('Erreur: $e')),
       );
     }
   }
 
   void _showImageFullScreen(BuildContext context, String imagePath) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ImageFullScreenViewer(imagePath: imagePath),
-      ),
-    );
+    if (widget.scan.boundingBoxes != null && widget.scan.boundingBoxes!.isNotEmpty && widget.scan.imageWidth != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              iconTheme: const IconThemeData(color: Colors.white),
+              title: const Text('Image & Highlights', style: TextStyle(color: Colors.white)),
+            ),
+            body: InteractiveBoundingBoxViewer(
+              imagePath: imagePath,
+              boundingBoxes: widget.scan.boundingBoxes!,
+              entities: widget.scan.entities,
+              imageSize: Size(widget.scan.imageWidth!.toDouble(), widget.scan.imageHeight!.toDouble()),
+            ),
+          ),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ImageFullScreenViewer(imagePath: imagePath),
+        ),
+      );
+    }
   }
 
   @override
@@ -311,7 +335,7 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
                 height: 300,
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!, width: 1),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ClipRRect(
@@ -347,11 +371,11 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
                     Row(
                       children: [
                         Icon(Icons.calendar_today,
-                            size: 16, color: Colors.grey[600]),
+                            size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         const SizedBox(width: 8),
                         Text(
                           _formatDate(widget.scan.createdAt),
-                          style: TextStyle(color: Colors.grey[600]),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -393,6 +417,49 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
 
               const SizedBox(height: 24),
 
+              // Entities Section
+              if (widget.scan.entities != null && widget.scan.entities!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Entités détectées',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: widget.scan.entities!.map((entity) {
+                          return InkWell(
+                            onTap: () {
+                              Clipboard.setData(ClipboardData(text: entity.text));
+                              FeedbackService().onTap();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${entity.text} copié!'),
+                                  backgroundColor: Colors.green,
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            child: Chip(
+                              label: Text(entity.text),
+                              avatar: const Icon(Icons.label, size: 16),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+
               // Text Content Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -422,16 +489,16 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           border:
-                              Border.all(color: Colors.grey[300]!, width: 1),
+                              Border.all(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           widget.scan.rawText ?? 'Aucun texte',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -459,16 +526,16 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue[50],
+                          color: Theme.of(context).colorScheme.primaryContainer,
                           border:
-                              Border.all(color: Colors.blue[200]!, width: 1),
+                              Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           widget.scan.translatedText!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -561,17 +628,17 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
             width: 130,
             child: Text(
               '$label:',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                color: Colors.black87,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontFamily: 'monospace',
               ),
             ),

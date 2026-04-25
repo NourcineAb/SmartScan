@@ -17,6 +17,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
                 AppConstants.defaultLanguage,
             soundsEnabled: prefs.getBool(AppConstants.prefEnableSounds) ??
                 AppConstants.defaultSoundEnabled,
+            vibrationEnabled: prefs.getBool(AppConstants.prefEnableVibration) ??
+                AppConstants.defaultVibrationEnabled,
             notificationsEnabled:
                 prefs.getBool(AppConstants.prefEnableNotifications) ??
                     AppConstants.defaultNotificationsEnabled,
@@ -25,6 +27,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<ChangeThemeModeEvent>(_onChangeThemeMode);
     on<ChangeLanguageEvent>(_onChangeLanguage);
     on<ToggleSoundsEvent>(_onToggleSounds);
+    on<ToggleVibrationEvent>(_onToggleVibration);
     on<ToggleNotificationsEvent>(_onToggleNotifications);
   }
 
@@ -65,6 +68,14 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     await prefs.setBool(AppConstants.prefEnableSounds, event.enabled);
     emit(state.copyWith(soundsEnabled: event.enabled));
+  }
+
+  Future<void> _onToggleVibration(
+    ToggleVibrationEvent event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await prefs.setBool(AppConstants.prefEnableVibration, event.enabled);
+    emit(state.copyWith(vibrationEnabled: event.enabled));
   }
 
   Future<void> _onToggleNotifications(

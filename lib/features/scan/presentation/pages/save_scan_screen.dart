@@ -112,9 +112,21 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
       setState(() {
         _categories = maps.map((m) => CategoryModel.fromMap(m)).toList();
         _isLoadingCategories = false;
-        // Pre-select first category if available
+        
+        // Auto-suggest category based on document type if available
         if (_categories.isNotEmpty) {
-          _selectedCategoryId = _categories.first.id;
+          _selectedCategoryId = _categories.first.id; // default
+          if (widget.documentType != null) {
+            final docTypeStr = widget.documentType!.toLowerCase();
+            for (final cat in _categories) {
+              if (cat.name.toLowerCase().contains(docTypeStr) || 
+                  (docTypeStr == 'invoice' && cat.name.toLowerCase().contains('facture')) ||
+                  (docTypeStr == 'receipt' && cat.name.toLowerCase().contains('ticket'))) {
+                _selectedCategoryId = cat.id;
+                break;
+              }
+            }
+          }
         }
       });
     } catch (e) {
@@ -137,16 +149,24 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // Use translated text if available, otherwise use original text
-      final textToSave = _translatedTextController.text.isNotEmpty
-          ? _translatedTextController.text
-          : _textController.text;
+      final rawTextToSave = _textController.text;
+      final translatedTextToSave = _translatedTextController.text.isNotEmpty ? _translatedTextController.text : null;
+      final targetLangToSave = translatedTextToSave != null ? _targetLanguage : null;
 
       final scanId = await ScanRepository().saveScan(
         title: title,
         imagePath: widget.imagePath,
-        rawText: textToSave,
+        rawText: rawTextToSave,
+        translatedText: translatedTextToSave,
+        detectedLanguage: widget.detectedLanguage,
+        targetLanguage: targetLangToSave,
         categoryId: _selectedCategoryId,
+        entities: widget.entities,
+        boundingBoxes: widget.boundingBoxes,
+        documentType: widget.documentType,
+        documentTypeConfidence: widget.documentTypeConfidence,
+        imageWidth: widget.imageWidth,
+        imageHeight: widget.imageHeight,
       );
 
       if (mounted) {

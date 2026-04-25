@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 
 /// VibrationManager handles haptic feedback on mobile devices
 class VibrationManager {
@@ -21,7 +21,11 @@ class VibrationManager {
 
     // Check if device has vibrator (mobile only)
     if (!kIsWeb) {
-      _hasVibrator = await Vibration.hasVibrator();
+      try {
+        _hasVibrator = await Haptics.canVibrate();
+      } catch (_) {
+        _hasVibrator = false;
+      }
     } else {
       _hasVibrator = false;
     }
@@ -38,7 +42,7 @@ class VibrationManager {
   Future<void> tapVibration() async {
     if (!_vibrationEnabled || !(_hasVibrator ?? false) || kIsWeb) return;
     try {
-      await Vibration.vibrate(duration: 30);
+      await Haptics.vibrate(HapticsType.selection);
     } catch (_) {}
   }
 
@@ -46,7 +50,7 @@ class VibrationManager {
   Future<void> successVibration() async {
     if (!_vibrationEnabled || !(_hasVibrator ?? false) || kIsWeb) return;
     try {
-      await Vibration.vibrate(pattern: [0, 25, 50, 25]);
+      await Haptics.vibrate(HapticsType.success);
     } catch (_) {}
   }
 
@@ -54,7 +58,7 @@ class VibrationManager {
   Future<void> errorVibration() async {
     if (!_vibrationEnabled || !(_hasVibrator ?? false) || kIsWeb) return;
     try {
-      await Vibration.vibrate(pattern: [0, 50, 30, 30, 30, 30]);
+      await Haptics.vibrate(HapticsType.error);
     } catch (_) {}
   }
 
@@ -62,7 +66,7 @@ class VibrationManager {
   Future<void> vibrate({required int duration}) async {
     if (!_vibrationEnabled || !(_hasVibrator ?? false) || kIsWeb) return;
     try {
-      await Vibration.vibrate(duration: duration);
+      await Haptics.vibrate(HapticsType.medium);
     } catch (_) {}
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/bounding_box_model.dart';
 import '../models/entity_model.dart';
@@ -293,8 +294,8 @@ class _InteractiveBoundingBoxViewerState
             fit: StackFit.expand,
             children: [
               // Image
-              Image.asset(
-                widget.imagePath,
+              Image.file(
+                File(widget.imagePath),
                 fit: BoxFit.contain,
               ),
               // Bounding box overlay

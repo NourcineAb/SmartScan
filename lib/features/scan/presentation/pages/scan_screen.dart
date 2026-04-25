@@ -175,7 +175,7 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
       // Navigate directly to save screen with all OCR data
       _navigateToSave(
         extractedText: ocrResult.fullText,
-        imagePath: image.path,
+        imagePath: ocrResult.imagePath,
         boundingBoxes: ocrResult.elements,
         entities: entities,
         detectedLanguage: detectedLanguage,

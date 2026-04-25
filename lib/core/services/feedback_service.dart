@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:vibration/vibration.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 /// Singleton service for sound and haptic feedback.
 /// Reads enable/disable flags from SharedPreferences on every call so it always
@@ -27,8 +28,8 @@ class FeedbackService {
   }
 
   Future<bool> get _vibrationEnabled async {
-    // Vibration has been disabled
-    return false;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('enable_vibration') ?? true;
   }
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
@@ -36,17 +37,19 @@ class FeedbackService {
   Future<void> _play(AudioPlayer player, String asset) async {
     try {
       await player.stop();
-      await player.play(AssetSource(asset), volume: 0.8);
+      await player.play(AssetSource(asset), volume: 1.0);
     } catch (_) {
       // Never crash the UI due to audio failure
     }
   }
 
-  Future<void> _buzz(int ms) async {
+  Future<void> _haptic(HapticsType type) async {
     try {
-      if (await Vibration.hasVibrator()) {
-        await Vibration.vibrate(duration: ms);
+      if (await Haptics.canVibrate()) {
+        await Haptics.vibrate(type);
       }
+    } on PlatformException catch (_) {
+      // Ignore haptic errors
     } catch (_) {}
   }
 
@@ -54,44 +57,46 @@ class FeedbackService {
 
   /// Light tap — for general button presses.
   Future<void> onTap() async {
-    if (await _soundEnabled) _play(_tapPlayer, 'sounds/tap.mp3');
-    if (await _vibrationEnabled) _buzz(18);
+    // We only use haptic feedback for general taps so the app isn't too noisy
+    if (await _vibrationEnabled) {
+      await _haptic(HapticsType.selection);
+    }
   }
 
   /// Camera shutter — when a photo is taken.
   Future<void> onShutter() async {
     if (await _soundEnabled) _play(_shutterPlayer, 'sounds/shutter.mp3');
-    if (await _vibrationEnabled) _buzz(35);
+    if (await _vibrationEnabled) await _haptic(HapticsType.medium);
   }
 
   /// Success — scan saved, translation done, etc.
   Future<void> onSuccess() async {
     if (await _soundEnabled) _play(_successPlayer, 'sounds/success.mp3');
-    if (await _vibrationEnabled) _buzz(60);
+    if (await _vibrationEnabled) await _haptic(HapticsType.success);
   }
 
   /// Save — file saved or exported.
   Future<void> onSave() async {
     if (await _soundEnabled) _play(_savePlayer, 'sounds/save.mp3');
-    if (await _vibrationEnabled) _buzz(80);
+    if (await _vibrationEnabled) await _haptic(HapticsType.heavy);
   }
 
   /// Error — something went wrong.
   Future<void> onError() async {
     if (await _soundEnabled) _play(_errorPlayer, 'sounds/error.mp3');
-    if (await _vibrationEnabled) _buzz(120);
+    if (await _vibrationEnabled) await _haptic(HapticsType.error);
   }
 
   /// Delete — category or item deleted.
   Future<void> onDelete() async {
     if (await _soundEnabled) _play(_deletePlayer, 'sounds/delete.mp3');
-    if (await _vibrationEnabled) _buzz(50);
+    if (await _vibrationEnabled) await _haptic(HapticsType.warning);
   }
 
   /// Vibration toggle — when vibration setting is changed.
   Future<void> onVibration() async {
     if (await _soundEnabled) _play(_vibrationPlayer, 'sounds/vibration.mp3');
-    if (await _vibrationEnabled) _buzz(40);
+    if (await _vibrationEnabled) await _haptic(HapticsType.selection);
   }
 
   /// Vibration toggle with conditional logic
@@ -102,7 +107,7 @@ class FeedbackService {
       if (await _soundEnabled) _play(_vibrationPlayer, 'sounds/vibration.mp3');
     } else {
       // Activating vibration - just vibrate, no sound
-      if (await _vibrationEnabled) _buzz(40);
+      if (await _vibrationEnabled) await _haptic(HapticsType.selection);
     }
   }
 

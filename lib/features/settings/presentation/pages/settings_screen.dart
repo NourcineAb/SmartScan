@@ -127,6 +127,18 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SettingsCard(
+          title: 'Vibration',
+          subtitle: 'Haptic feedback for actions',
+          trailing: Switch(
+            value: state.vibrationEnabled,
+            onChanged: (value) async {
+              context.read<SettingsBloc>().add(ToggleVibrationEvent(value));
+              await FeedbackService().onVibrationToggled(value);
+            },
+            activeThumbColor: AppColors.primary,
+          ),
+        ),
+        _SettingsCard(
           title: l10n?.settings_notifications ?? 'Notifications',
           subtitle: l10n?.settings_app_reminders ?? 'Reminders to use the app',
           trailing: Switch(

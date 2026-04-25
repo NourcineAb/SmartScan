@@ -27,3 +27,9 @@ class ToggleNotificationsEvent extends SettingsEvent {
 
   const ToggleNotificationsEvent(this.enabled);
 }
+
+class ToggleVibrationEvent extends SettingsEvent {
+  final bool enabled;
+
+  const ToggleVibrationEvent(this.enabled);
+}

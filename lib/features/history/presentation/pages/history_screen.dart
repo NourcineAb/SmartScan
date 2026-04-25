@@ -245,11 +245,11 @@ class _HistoryScreenContentState extends State<_HistoryScreenContent>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
                 const SizedBox(height: 16),
                 Text(state.message,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.red[700])),
+                    style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () => context
@@ -268,19 +268,19 @@ class _HistoryScreenContentState extends State<_HistoryScreenContent>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
+                Icon(Icons.inbox_outlined, size: 80, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
                 Text(
                   'No Scans Yet',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey[700]),
+                      color: Theme.of(context).colorScheme.onSurface),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Scan a document to get started',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -323,19 +323,19 @@ class _HistoryScreenContentState extends State<_HistoryScreenContent>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.translate_outlined, size: 80, color: Colors.grey[400]),
+            Icon(Icons.translate_outlined, size: 80, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'No Saved Translations',
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[700]),
+                  color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 8),
             Text(
               'Save translations from the translation tool',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
           ],
         ),
@@ -371,7 +371,7 @@ class _ScanCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Widget _buildThumbnail() {
+  Widget _buildThumbnail(BuildContext context) {
     if (scan.imagePath != null && scan.imagePath!.isNotEmpty) {
       try {
         return ClipRRect(
@@ -381,23 +381,23 @@ class _ScanCard extends StatelessWidget {
             width: 64,
             height: 64,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholderThumb(),
+            errorBuilder: (_, __, ___) => _placeholderThumb(context),
           ),
         );
       } catch (_) {}
     }
-    return _placeholderThumb();
+    return _placeholderThumb(context);
   }
 
-  Widget _placeholderThumb() {
+  Widget _placeholderThumb(BuildContext context) {
     return Container(
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: Colors.indigo[50],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(Icons.description, color: Colors.indigo[300], size: 30),
+      child: Icon(Icons.description, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 30),
     );
   }
 
@@ -434,7 +434,7 @@ class _ScanCard extends StatelessWidget {
           child: Row(
             children: [
               // Thumbnail
-              _buildThumbnail(),
+              _buildThumbnail(context),
               const SizedBox(width: 12),
               // Info
               Expanded(
@@ -452,12 +452,12 @@ class _ScanCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(Icons.access_time,
-                            size: 12, color: Colors.grey[500]),
+                            size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Text(
                           _formatDate(scan.createdAt),
                           style:
-                              TextStyle(fontSize: 12, color: Colors.grey[500]),
+                              TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -497,7 +497,7 @@ class _ScanCard extends StatelessWidget {
                             : scan.rawText!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ],
@@ -505,7 +505,7 @@ class _ScanCard extends StatelessWidget {
               ),
               // Actions
               PopupMenuButton(
-                icon: Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
+                icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
                 itemBuilder: (context) => [
                   PopupMenuItem(
                     child: const Row(children: [
@@ -543,10 +543,10 @@ class _ScanCard extends StatelessWidget {
                   ),
                   PopupMenuItem(
                     onTap: onDelete,
-                    child: const Row(children: [
-                      Icon(Icons.delete, size: 18, color: Colors.red),
+                    child: Row(children: [
+                      Icon(Icons.delete, size: 18, color: Theme.of(context).colorScheme.error),
                       SizedBox(width: 8),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
+                      Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                     ]),
                   ),
                 ],
@@ -621,16 +621,16 @@ class _TranslationCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.shade200),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                       ),
                       child: Text(
                         '${_getLanguageName(sourceLang)} → ${_getLanguageName(targetLang)}',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue[700],
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
@@ -638,11 +638,11 @@ class _TranslationCard extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 12, color: Colors.grey[500]),
+                    Icon(Icons.access_time, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text(
                       _formatDate(createdAt),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -654,9 +654,9 @@ class _TranslationCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,7 +666,7 @@ class _TranslationCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -685,9 +685,9 @@ class _TranslationCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.green[50],
+                color: Theme.of(context).colorScheme.tertiaryContainer,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade200),
+                border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,7 +697,7 @@ class _TranslationCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Colors.green[700],
+                      color: Theme.of(context).colorScheme.onTertiaryContainer,
                     ),
                   ),
                   const SizedBox(height: 4),
