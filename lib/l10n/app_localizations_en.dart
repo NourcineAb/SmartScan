@@ -621,4 +621,76 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settings_save_data_cloud => 'Save your data to the cloud';
+
+  @override
+  String get welcome_title => 'Welcome to SmartScan';
+
+  @override
+  String get welcome_subtitle => 'Your intelligent document scanning companion';
+
+  @override
+  String get welcome_description =>
+      'SmartScan uses advanced AI and ML Kit technology to extract text from documents, recognize entities, detect document types, and provide instant translations.';
+
+  @override
+  String get welcome_features_title => 'Key Features';
+
+  @override
+  String get welcome_feature_ocr => 'Advanced OCR with text recognition';
+
+  @override
+  String get welcome_feature_entities =>
+      'Smart entity extraction (dates, addresses, phones)';
+
+  @override
+  String get welcome_feature_types => 'Automatic document type detection';
+
+  @override
+  String get welcome_feature_translation =>
+      'Real-time translation in 15+ languages';
+
+  @override
+  String get welcome_feature_reminders => 'Smart reminder suggestions';
+
+  @override
+  String get welcome_get_started => 'Get Started';
+
+  @override
+  String get welcome_learn_more => 'Learn More';
+
+  @override
+  String get about_title => 'About SmartScan';
+
+  @override
+  String get about_version => 'Version 1.0.0';
+
+  @override
+  String get about_description =>
+      'SmartScan is a production-ready OCR and document scanning application built with Flutter.';
+
+  @override
+  String get about_api_title => 'Technologies & APIs';
+
+  @override
+  String get about_api_mlk =>
+      'Google ML Kit - Text Recognition, Entity Extraction, Language ID, Translation';
+
+  @override
+  String get about_api_firebase => 'Firebase - Analytics, Storage';
+
+  @override
+  String get about_api_ocr => 'On-device OCR processing';
+
+  @override
+  String get about_open_source => 'Open Source Libraries';
+
+  @override
+  String get about_privacy => 'Privacy First';
+
+  @override
+  String get about_privacy_desc =>
+      'All processing is done on-device. Your documents never leave your phone unless you choose to sync.';
+
+  @override
+  String get about_copyright => '© 2026 SmartScan. All rights reserved.';
 }

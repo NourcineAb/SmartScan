@@ -1,5 +1,7 @@
 import 'package:uuid/uuid.dart';
 import 'package:smart_scan/shared/models/scan_model.dart';
+import 'package:smart_scan/shared/models/entity_model.dart';
+import 'package:smart_scan/shared/models/bounding_box_model.dart';
 import 'package:smart_scan/core/services/database_service.dart';
 import 'package:smart_scan/core/services/file_storage_service.dart';
 
@@ -17,7 +19,7 @@ class ScanRepository {
   final DatabaseService _dbService = DatabaseService();
   final FileStorageService _fileService = FileStorageService();
 
-  /// Save a new scan with image
+  /// Save a new scan with image and all metadata
   /// Returns the scan ID if successful
   Future<String> saveScan({
     required String title,
@@ -27,6 +29,14 @@ class ScanRepository {
     String? translatedText,
     String? detectedLanguage,
     String? targetLanguage,
+    List<EntityModel>? entities,
+    List<BoundingBoxModel>? boundingBoxes,
+    String? documentType,
+    double? documentTypeConfidence,
+    String? reminderSuggestion,
+    DateTime? suggestedReminderDate,
+    int? imageWidth,
+    int? imageHeight,
   }) async {
     try {
       final scanId = const Uuid().v4();
@@ -40,7 +50,7 @@ class ScanRepository {
         );
       }
 
-      // Create scan model
+      // Create scan model with all fields
       final scan = ScanModel(
         id: scanId,
         title: title,
@@ -50,6 +60,14 @@ class ScanRepository {
         detectedLanguage: detectedLanguage,
         targetLanguage: targetLanguage,
         categoryId: categoryId,
+        entities: entities,
+        boundingBoxes: boundingBoxes,
+        documentType: documentType,
+        documentTypeConfidence: documentTypeConfidence,
+        reminderSuggestion: reminderSuggestion,
+        suggestedReminderDate: suggestedReminderDate,
+        imageWidth: imageWidth,
+        imageHeight: imageHeight,
         createdAt: DateTime.now(),
       );
 
@@ -138,6 +156,13 @@ class ScanRepository {
     String? translatedText,
     String? categoryId,
     String? targetLanguage,
+    List<EntityModel>? entities,
+    List<BoundingBoxModel>? boundingBoxes,
+    String? documentType,
+    double? documentTypeConfidence,
+    String? reminderSuggestion,
+    DateTime? suggestedReminderDate,
+    bool? reminderDismissed,
   }) async {
     try {
       final updates = <String, dynamic>{};
@@ -147,10 +172,30 @@ class ScanRepository {
       if (translatedText != null) updates['translated_text'] = translatedText;
       if (categoryId != null) updates['category_id'] = categoryId;
       if (targetLanguage != null) updates['target_language'] = targetLanguage;
+      if (entities != null) {
+        updates['entities_json'] = entities.map((e) => e.toMap()).toList();
+      }
+      if (boundingBoxes != null) {
+        updates['bounding_boxes_json'] = boundingBoxes.map((b) => b.toMap()).toList();
+      }
+      if (documentType != null) updates['document_type'] = documentType;
+      if (documentTypeConfidence != null) updates['document_type_confidence'] = documentTypeConfidence;
+      if (reminderSuggestion != null) updates['reminder_suggestion'] = reminderSuggestion;
+      if (suggestedReminderDate != null) updates['suggested_reminder_date'] = suggestedReminderDate.toIso8601String();
+      if (reminderDismissed != null) updates['reminder_dismissed'] = reminderDismissed ? 1 : 0;
 
       if (updates.isNotEmpty) {
         await _dbService.updateScan(scanId, updates);
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Dismiss a reminder suggestion for a scan
+  Future<void> dismissReminder(String scanId) async {
+    try {
+      await _dbService.updateScan(scanId, {'reminder_dismissed': 1});
     } catch (e) {
       rethrow;
     }

@@ -56,6 +56,7 @@ class AppColors {
   // Entity colors for highlighting
   static const Color entityDate = Color(0xFFFF6B6B);
   static const Color entityAddress = Color(0xFF4ECDC4);
+  static const Color entityLocation = Color(0xFF4ECDC4);
   static const Color entityPhone = Color(0xFFFFE66D);
   static const Color entityPrice = Color(0xFF95E1D3);
   static const Color entityEmail = Color(0xFFA8DADC);

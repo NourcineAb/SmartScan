@@ -230,5 +230,29 @@
   "settings_app_reminders": "Reminders to use the app",
   
   "settings_cloud_sync": "Cloud Synchronization",
-  "settings_save_data_cloud": "Save your data to the cloud"
+  "settings_save_data_cloud": "Save your data to the cloud",
+
+  "welcome_title": "Welcome to SmartScan",
+  "welcome_subtitle": "Your intelligent document scanning companion",
+  "welcome_description": "SmartScan uses advanced AI and ML Kit technology to extract text from documents, recognize entities, detect document types, and provide instant translations.",
+  "welcome_features_title": "Key Features",
+  "welcome_feature_ocr": "Advanced OCR with text recognition",
+  "welcome_feature_entities": "Smart entity extraction (dates, addresses, phones)",
+  "welcome_feature_types": "Automatic document type detection",
+  "welcome_feature_translation": "Real-time translation in 15+ languages",
+  "welcome_feature_reminders": "Smart reminder suggestions",
+  "welcome_get_started": "Get Started",
+  "welcome_learn_more": "Learn More",
+
+  "about_title": "About SmartScan",
+  "about_version": "Version 1.0.0",
+  "about_description": "SmartScan is a production-ready OCR and document scanning application built with Flutter.",
+  "about_api_title": "Technologies & APIs",
+  "about_api_mlk": "Google ML Kit - Text Recognition, Entity Extraction, Language ID, Translation",
+  "about_api_firebase": "Firebase - Analytics, Storage",
+  "about_api_ocr": "On-device OCR processing",
+  "about_open_source": "Open Source Libraries",
+  "about_privacy": "Privacy First",
+  "about_privacy_desc": "All processing is done on-device. Your documents never leave your phone unless you choose to sync.",
+  "about_copyright": "© 2026 SmartScan. All rights reserved."
 }

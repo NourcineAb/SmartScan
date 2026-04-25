@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'entity_model.dart';
+import 'bounding_box_model.dart';
 
 class ScanModel {
   final String id;
@@ -11,6 +12,14 @@ class ScanModel {
   final String? targetLanguage;
   final String? categoryId;
   final List<EntityModel>? entities;
+  final List<BoundingBoxModel>? boundingBoxes;
+  final String? documentType;
+  final double? documentTypeConfidence;
+  final String? reminderSuggestion;
+  final DateTime? suggestedReminderDate;
+  final bool reminderDismissed;
+  final int? imageWidth;
+  final int? imageHeight;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final bool isSynced;
@@ -25,6 +34,14 @@ class ScanModel {
     this.targetLanguage,
     this.categoryId,
     this.entities,
+    this.boundingBoxes,
+    this.documentType,
+    this.documentTypeConfidence,
+    this.reminderSuggestion,
+    this.suggestedReminderDate,
+    this.reminderDismissed = false,
+    this.imageWidth,
+    this.imageHeight,
     required this.createdAt,
     this.updatedAt,
     this.isSynced = false,
@@ -43,6 +60,16 @@ class ScanModel {
       'entities_json': entities != null
           ? jsonEncode(entities!.map((e) => e.toMap()).toList())
           : null,
+      'bounding_boxes_json': boundingBoxes != null
+          ? jsonEncode(boundingBoxes!.map((b) => b.toMap()).toList())
+          : null,
+      'document_type': documentType,
+      'document_type_confidence': documentTypeConfidence,
+      'reminder_suggestion': reminderSuggestion,
+      'suggested_reminder_date': suggestedReminderDate?.toIso8601String(),
+      'reminder_dismissed': reminderDismissed ? 1 : 0,
+      'image_width': imageWidth,
+      'image_height': imageHeight,
       'created_at': createdAt.toIso8601String(),
       'updated_at': (updatedAt ?? DateTime.now()).toIso8601String(),
       if (!forDatabase) 'is_synced': isSynced ? 1 : 0,
@@ -64,6 +91,20 @@ class ScanModel {
                 .map((e) => EntityModel.fromMap(e as Map<String, dynamic>))
                 .toList()
           : null,
+      boundingBoxes: map['bounding_boxes_json'] != null
+          ? (jsonDecode(map['bounding_boxes_json'] as String) as List)
+                .map((b) => BoundingBoxModel.fromMap(b as Map<String, dynamic>))
+                .toList()
+          : null,
+      documentType: map['document_type'] as String?,
+      documentTypeConfidence: (map['document_type_confidence'] as num?)?.toDouble(),
+      reminderSuggestion: map['reminder_suggestion'] as String?,
+      suggestedReminderDate: map['suggested_reminder_date'] != null
+          ? DateTime.tryParse(map['suggested_reminder_date'] as String)
+          : null,
+      reminderDismissed: (map['reminder_dismissed'] as int?) == 1,
+      imageWidth: map['image_width'] as int?,
+      imageHeight: map['image_height'] as int?,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: map['updated_at'] != null
           ? DateTime.parse(map['updated_at'] as String)
@@ -82,6 +123,14 @@ class ScanModel {
     String? targetLanguage,
     String? categoryId,
     List<EntityModel>? entities,
+    List<BoundingBoxModel>? boundingBoxes,
+    String? documentType,
+    double? documentTypeConfidence,
+    String? reminderSuggestion,
+    DateTime? suggestedReminderDate,
+    bool? reminderDismissed,
+    int? imageWidth,
+    int? imageHeight,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSynced,
@@ -96,6 +145,14 @@ class ScanModel {
       targetLanguage: targetLanguage ?? this.targetLanguage,
       categoryId: categoryId ?? this.categoryId,
       entities: entities ?? this.entities,
+      boundingBoxes: boundingBoxes ?? this.boundingBoxes,
+      documentType: documentType ?? this.documentType,
+      documentTypeConfidence: documentTypeConfidence ?? this.documentTypeConfidence,
+      reminderSuggestion: reminderSuggestion ?? this.reminderSuggestion,
+      suggestedReminderDate: suggestedReminderDate ?? this.suggestedReminderDate,
+      reminderDismissed: reminderDismissed ?? this.reminderDismissed,
+      imageWidth: imageWidth ?? this.imageWidth,
+      imageHeight: imageHeight ?? this.imageHeight,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,

@@ -621,4 +621,75 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settings_save_data_cloud => 'حفظ بياناتك في السحابة';
+
+  @override
+  String get welcome_title => 'مرحباً بك في SmartScan';
+
+  @override
+  String get welcome_subtitle => 'رفيقك الذكي في مسح المستندات';
+
+  @override
+  String get welcome_description =>
+      'يستخدم SmartScan الذكاء الاصطناعي المتقدم وتقنية ML Kit لاستخراج النصوص من المستندات والتعرف على الكيانات واكتشاف أنواع المستندات وتقديم الترجمات الفورية.';
+
+  @override
+  String get welcome_features_title => 'الميزات الرئيسية';
+
+  @override
+  String get welcome_feature_ocr => 'OCR متقدم مع التعرف على النص';
+
+  @override
+  String get welcome_feature_entities =>
+      'استخراج ذكي للكيانات (تواريخ، عناوين، هواتف)';
+
+  @override
+  String get welcome_feature_types => 'اكتشاف تلقائي لأنواع المستندات';
+
+  @override
+  String get welcome_feature_translation => 'ترجمة فورية بأكثر من 15 لغة';
+
+  @override
+  String get welcome_feature_reminders => 'اقتراحات ذكية للتذكير';
+
+  @override
+  String get welcome_get_started => 'البدء';
+
+  @override
+  String get welcome_learn_more => 'معرفة المزيد';
+
+  @override
+  String get about_title => 'حول SmartScan';
+
+  @override
+  String get about_version => 'الإصدار 1.0.0';
+
+  @override
+  String get about_description =>
+      'SmartScan هو تطبيق مسح وOCR للمستندات جاهز للإنتاج، مبني باستخدام Flutter.';
+
+  @override
+  String get about_api_title => 'التقنيات وواجهات برمجة التطبيقات';
+
+  @override
+  String get about_api_mlk =>
+      'Google ML Kit - التعرف على النص، استخراج الكيانات، تحديد اللغة، الترجمة';
+
+  @override
+  String get about_api_firebase => 'Firebase - التحليلات، التخزين';
+
+  @override
+  String get about_api_ocr => 'معالجة OCR على الجهاز';
+
+  @override
+  String get about_open_source => 'المكتبات مفتوحة المصدر';
+
+  @override
+  String get about_privacy => 'الخصوصية أولاً';
+
+  @override
+  String get about_privacy_desc =>
+      'جميع المعالجات تتم على الجهاز. مستنداتك لا تغادر هاتفك أبداً إلا إذا اخترت المزامنة.';
+
+  @override
+  String get about_copyright => '© 2026 SmartScan. جميع الحقوق محفوظة.';
 }

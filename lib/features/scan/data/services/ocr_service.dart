@@ -1,44 +1,141 @@
 import 'package:flutter/foundation.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart'
-    as ml_kit;
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart' as ml_kit;
 import 'dart:io';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
+import '../../../../shared/models/bounding_box_model.dart';
 
-class OCRService {
-  static final OCRService _instance = OCRService._internal();
+/// Structured OCR result containing full extraction data
+class StructuredOCRResult {
+  final String fullText;
+  final List<BoundingBoxModel> blocks;
+  final List<BoundingBoxModel> lines;
+  final List<BoundingBoxModel> elements;
+  final int imageWidth;
+  final int imageHeight;
+  final bool isMock;
 
-  factory OCRService() {
-    return _instance;
+  StructuredOCRResult({
+    required this.fullText,
+    required this.blocks,
+    required this.lines,
+    required this.elements,
+    required this.imageWidth,
+    required this.imageHeight,
+    this.isMock = false,
+  });
+
+  /// Get the main text region for smart crop suggestion
+  Map<String, double>? getMainTextRegion() {
+    if (blocks.isEmpty) return null;
+
+    // Find the bounding box that contains all text
+    double minLeft = 1.0, minTop = 1.0, maxRight = 0.0, maxBottom = 0.0;
+
+    for (final block in blocks) {
+      if (block.left < minLeft) minLeft = block.left;
+      if (block.top < minTop) minTop = block.top;
+      if (block.right > maxRight) maxRight = block.right;
+      if (block.bottom > maxBottom) maxBottom = block.bottom;
+    }
+
+    // Add padding
+    final padding = 0.02;
+    return {
+      'left': (minLeft - padding).clamp(0.0, 1.0),
+      'top': (minTop - padding).clamp(0.0, 1.0),
+      'right': (maxRight + padding).clamp(0.0, 1.0),
+      'bottom': (maxBottom + padding).clamp(0.0, 1.0),
+    };
   }
 
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'full_text': fullText,
+      'image_width': imageWidth,
+      'image_height': imageHeight,
+      'is_mock': isMock,
+      'blocks': blocks.map((b) => b.toMap()).toList(),
+      'lines': lines.map((l) => l.toMap()).toList(),
+      'elements': elements.map((e) => e.toMap()).toList(),
+    };
+  }
+
+  factory StructuredOCRResult.fromMap(Map<String, dynamic> map) {
+    return StructuredOCRResult(
+      fullText: map['full_text'] as String,
+      imageWidth: map['image_width'] as int,
+      imageHeight: map['image_height'] as int,
+      isMock: map['is_mock'] as bool? ?? false,
+      blocks: (map['blocks'] as List? ?? [])
+          .map((b) => BoundingBoxModel.fromMap(b as Map<String, dynamic>))
+          .toList(),
+      lines: (map['lines'] as List? ?? [])
+          .map((l) => BoundingBoxModel.fromMap(l as Map<String, dynamic>))
+          .toList(),
+      elements: (map['elements'] as List? ?? [])
+          .map((e) => BoundingBoxModel.fromMap(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+/// Enhanced OCR Service with structured pipeline and bounding box extraction
+class OCRService {
+  static final OCRService _instance = OCRService._internal();
+  factory OCRService() => _instance;
   OCRService._internal();
 
-  // Only initialize text recognizer on mobile platforms
   ml_kit.TextRecognizer? _textRecognizer;
+  final _uuid = const Uuid();
 
   ml_kit.TextRecognizer _getRecognizer() {
     _textRecognizer ??= ml_kit.TextRecognizer();
     return _textRecognizer!;
   }
 
-  Future<String> extractTextFromImage(
+  /// Main extraction method with structured result
+  Future<StructuredOCRResult> extractStructuredText(
     String imagePath, {
     Map<String, dynamic>? cropZone,
   }) async {
     try {
       // For web platform, use mock implementation
       if (kIsWeb) {
-        return _extractTextWeb(imagePath);
+        return _extractStructuredTextWeb(imagePath);
       }
 
       // For mobile platforms, use google_mlkit
       try {
         String processImagePath = imagePath;
+        int imageWidth = 0;
+        int imageHeight = 0;
+
+        // Get image dimensions
+        final imageFile = File(imagePath);
+        if (await imageFile.exists()) {
+          final imageBytes = await imageFile.readAsBytes();
+          final image = img.decodeImage(imageBytes);
+          if (image != null) {
+            imageWidth = image.width;
+            imageHeight = image.height;
+          }
+        }
 
         // If crop zone is provided, crop the image before processing
         if (cropZone != null) {
           processImagePath = await _cropImage(imagePath, cropZone);
+          // Get cropped image dimensions
+          final croppedFile = File(processImagePath);
+          if (await croppedFile.exists()) {
+            final croppedBytes = await croppedFile.readAsBytes();
+            final croppedImage = img.decodeImage(croppedBytes);
+            if (croppedImage != null) {
+              imageWidth = croppedImage.width;
+              imageHeight = croppedImage.height;
+            }
+          }
         }
 
         final inputImage = ml_kit.InputImage.fromFilePath(processImagePath);
@@ -46,12 +143,12 @@ class OCRService {
         final ml_kit.RecognizedText recognizedText =
             await recognizer.processImage(inputImage);
 
-        String extractedText = '';
-        for (ml_kit.TextBlock block in recognizedText.blocks) {
-          for (ml_kit.TextLine line in block.lines) {
-            extractedText += '${line.text}\n';
-          }
-        }
+        // Extract structured data with bounding boxes
+        final result = _extractStructuredData(
+          recognizedText,
+          imageWidth,
+          imageHeight,
+        );
 
         // Clean up cropped image if it was created
         if (cropZone != null && processImagePath != imagePath) {
@@ -62,17 +159,149 @@ class OCRService {
           }
         }
 
-        return extractedText.trim();
-      } on Exception catch (_) {
-        // Fallback to mock if google_mlkit fails
-        return _extractTextWeb(imagePath);
+        return result;
+      } on Exception catch (e) {
+        debugPrint('ML Kit OCR failed: $e, falling back to mock');
+        return _extractStructuredTextWeb(imagePath);
       }
     } catch (error) {
-      // Generic error handling
-      return _extractTextWeb(imagePath);
+      debugPrint('OCR error: $error, falling back to mock');
+      return _extractStructuredTextWeb(imagePath);
     }
   }
 
+  /// Legacy method for backward compatibility
+  Future<String> extractTextFromImage(
+    String imagePath, {
+    Map<String, dynamic>? cropZone,
+  }) async {
+    final result = await extractStructuredText(imagePath, cropZone: cropZone);
+    return result.fullText;
+  }
+
+  /// Extract structured data from ML Kit result
+  StructuredOCRResult _extractStructuredData(
+    ml_kit.RecognizedText recognizedText,
+    int imageWidth,
+    int imageHeight,
+  ) {
+    final blocks = <BoundingBoxModel>[];
+    final lines = <BoundingBoxModel>[];
+    final elements = <BoundingBoxModel>[];
+    final fullTextBuffer = StringBuffer();
+
+    int blockIndex = 0;
+
+    for (final block in recognizedText.blocks) {
+      final blockLines = <String>[];
+      int lineIndex = 0;
+
+      // Process block bounding box
+      final blockBox = _normalizeBoundingBox(
+        block.boundingBox,
+        imageWidth,
+        imageHeight,
+      );
+
+      for (final line in block.lines) {
+        blockLines.add(line.text);
+        int elementIndex = 0;
+
+        // Process line bounding box
+        final lineBox = _normalizeBoundingBox(
+          line.boundingBox,
+          imageWidth,
+          imageHeight,
+        );
+
+        lines.add(BoundingBoxModel(
+          id: _uuid.v4(),
+          text: line.text,
+          type: 'line',
+          left: lineBox['left']!,
+          top: lineBox['top']!,
+          right: lineBox['right']!,
+          bottom: lineBox['bottom']!,
+          confidence: 0.9,
+          blockIndex: blockIndex,
+          lineIndex: lineIndex,
+        ));
+
+        for (final element in line.elements) {
+          // Process element bounding box
+          final elementBox = _normalizeBoundingBox(
+            element.boundingBox,
+            imageWidth,
+            imageHeight,
+          );
+
+          elements.add(BoundingBoxModel(
+            id: _uuid.v4(),
+            text: element.text,
+            type: 'element',
+            left: elementBox['left']!,
+            top: elementBox['top']!,
+            right: elementBox['right']!,
+            bottom: elementBox['bottom']!,
+            confidence: 0.85,
+            blockIndex: blockIndex,
+            lineIndex: lineIndex,
+            elementIndex: elementIndex,
+          ));
+
+          elementIndex++;
+        }
+
+        lineIndex++;
+      }
+
+      // Add block
+      blocks.add(BoundingBoxModel(
+        id: _uuid.v4(),
+        text: blockLines.join('\n'),
+        type: 'block',
+        left: blockBox['left']!,
+        top: blockBox['top']!,
+        right: blockBox['right']!,
+        bottom: blockBox['bottom']!,
+        confidence: 0.95,
+        blockIndex: blockIndex,
+      ));
+
+      fullTextBuffer.writeln(blockLines.join('\n'));
+      blockIndex++;
+    }
+
+    return StructuredOCRResult(
+      fullText: fullTextBuffer.toString().trim(),
+      blocks: blocks,
+      lines: lines,
+      elements: elements,
+      imageWidth: imageWidth,
+      imageHeight: imageHeight,
+      isMock: false,
+    );
+  }
+
+  /// Normalize bounding box to 0.0-1.0 range
+  Map<String, double> _normalizeBoundingBox(
+    Rect? boundingBox,
+    int imageWidth,
+    int imageHeight,
+  ) {
+    if (boundingBox == null || imageWidth == 0 || imageHeight == 0) {
+      return {'left': 0.0, 'top': 0.0, 'right': 1.0, 'bottom': 1.0};
+    }
+
+    return {
+      'left': (boundingBox.left / imageWidth).clamp(0.0, 1.0),
+      'top': (boundingBox.top / imageHeight).clamp(0.0, 1.0),
+      'right': (boundingBox.right / imageWidth).clamp(0.0, 1.0),
+      'bottom': (boundingBox.bottom / imageHeight).clamp(0.0, 1.0),
+    };
+  }
+
+  /// Crop image based on normalized coordinates
   Future<String> _cropImage(
     String imagePath,
     Map<String, dynamic> cropZone,
@@ -112,53 +341,180 @@ class OCRService {
       );
 
       // Save cropped image to temporary file
+      final dir = await imageFile.parent.createTemp('crop_');
       final tempFile = File(
-        '${imagePath.substring(0, imagePath.lastIndexOf('/'))}/cropped_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        '${dir.path}/cropped_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
       await tempFile.writeAsBytes(img.encodeJpg(croppedImage, quality: 90));
 
       return tempFile.path;
     } catch (e) {
-      // If cropping fails, return original image
+      debugPrint('Image cropping failed: $e');
       return imagePath;
     }
   }
 
-  // Mock OCR implementation for web/demo purposes
-  Future<String> _extractTextWeb(String imagePath) async {
-    // Simulate processing delay
-    await Future.delayed(const Duration(milliseconds: 800));
+  /// Mock OCR implementation for web/demo purposes
+  StructuredOCRResult _extractStructuredTextWeb(String imagePath) {
+    final mockText = 'SmartScan Document Processing System\n\n'
+        'Date: April 2, 2026\n'
+        'Document Type: Invoice\n\n'
+        'INVOICE 2026-001235\n\n'
+        'Bill To:\n'
+        'Company Name: TechCorp Solutions\n'
+        'Address: 123 Business Avenue\n'
+        'City: San Francisco, CA 94105\n'
+        'Contact: John Smith\n'
+        'Email: john.smith@techcorp.com\n'
+        'Phone: +1 (555) 123-4567\n\n'
+        'Services Rendered:\n'
+        '- Document Scanning and OCR Processing\n'
+        '- Text Recognition and Extraction\n'
+        '- Multilingual Translation Support\n'
+        '- Export to PDF/Word Format\n\n'
+        'Total Amount Due: USD 1250.00\n'
+        'Due Date: April 30, 2026\n\n'
+        'Terms: Net 30 days\n'
+        'Payment Method: Bank Transfer\n\n'
+        'Thank you for your business\n'
+        'Visit us at techcorp dot com\n'
+        'Next meeting: Next Friday at 2 PM';
 
-    // Return mock OCR extracted text
-    return '''SmartScan Document Processing System
+    // Create mock bounding boxes
+    final blocks = <BoundingBoxModel>[
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'SmartScan Document Processing System',
+        type: 'block',
+        left: 0.05,
+        top: 0.05,
+        right: 0.95,
+        bottom: 0.12,
+        confidence: 0.98,
+        blockIndex: 0,
+      ),
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'Date: April 2, 2026\nDocument Type: Invoice',
+        type: 'block',
+        left: 0.05,
+        top: 0.14,
+        right: 0.50,
+        bottom: 0.22,
+        confidence: 0.95,
+        blockIndex: 1,
+      ),
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'INVOICE #2026-001235',
+        type: 'block',
+        left: 0.55,
+        top: 0.14,
+        right: 0.95,
+        bottom: 0.20,
+        confidence: 0.97,
+        blockIndex: 2,
+      ),
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'Bill To:\nCompany Name: TechCorp Solutions\nAddress: 123 Business Avenue\nCity: San Francisco, CA 94105\nContact: John Smith\nEmail: john.smith@techcorp.com\nPhone: +1 (555) 123-4567',
+        type: 'block',
+        left: 0.05,
+        top: 0.24,
+        right: 0.60,
+        bottom: 0.50,
+        confidence: 0.94,
+        blockIndex: 3,
+      ),
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'Services Rendered:\n- Document Scanning & OCR Processing\n- Text Recognition & Extraction\n- Multilingual Translation Support\n- Export to PDF/Word Format',
+        type: 'block',
+        left: 0.05,
+        top: 0.52,
+        right: 0.95,
+        bottom: 0.70,
+        confidence: 0.92,
+        blockIndex: 4,
+      ),
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'Total Amount Due: USD 1,250.00. Due Date: April 30, 2026. Terms: Net 30 days. Payment Method: Bank Transfer',
+        type: 'block',
+        left: 0.05,
+        top: 0.72,
+        right: 0.55,
+        bottom: 0.90,
+        confidence: 0.96,
+        blockIndex: 5,
+      ),
+      BoundingBoxModel(
+        id: _uuid.v4(),
+        text: 'Thank you for your business! Visit us at techcorp.com. Next meeting: Next Friday at 2 PM',
+        type: 'block',
+        left: 0.05,
+        top: 0.92,
+        right: 0.95,
+        bottom: 0.98,
+        confidence: 0.93,
+        blockIndex: 6,
+      ),
+    ];
 
-Date: April 2, 2026
-Document Type: Invoice
+    // Create lines from blocks
+    final lines = <BoundingBoxModel>[];
+    int lineIdx = 0;
+    for (final block in blocks) {
+      final blockLines = block.text.split('\n');
+      final lineHeight = (block.bottom - block.top) / blockLines.length;
+      for (int i = 0; i < blockLines.length; i++) {
+        lines.add(BoundingBoxModel(
+          id: _uuid.v4(),
+          text: blockLines[i],
+          type: 'line',
+          left: block.left,
+          top: block.top + (i * lineHeight),
+          right: block.right,
+          bottom: block.top + ((i + 1) * lineHeight),
+          confidence: 0.90,
+          blockIndex: block.blockIndex,
+          lineIndex: lineIdx++,
+        ));
+      }
+    }
 
-INVOICE #2026-001235
+    // Create elements (simplified - one element per line)
+    final elements = <BoundingBoxModel>[];
+    int elemIdx = 0;
+    for (final line in lines) {
+      elements.add(BoundingBoxModel(
+        id: _uuid.v4(),
+        text: line.text,
+        type: 'element',
+        left: line.left,
+        top: line.top,
+        right: line.right,
+        bottom: line.bottom,
+        confidence: 0.85,
+        blockIndex: line.blockIndex,
+        lineIndex: line.lineIndex,
+        elementIndex: elemIdx++,
+      ));
+    }
 
-Bill To:
-Company Name: TechCorp Solutions
-Address: 123 Business Avenue
-City: San Francisco, CA 94105
-Contact: John Smith
-
-Services Rendered:
-- Document Scanning & OCR Processing
-- Text Recognition & Extraction
-- Multilingual Translation Support
-- Export to PDF/Word Format
-
-Total Amount Due: \$1,250.00
-Due Date: April 30, 2026
-
-Terms: Net 30 days
-Payment Method: Bank Transfer
-
-Thank you for your business!''';
+    return StructuredOCRResult(
+      fullText: mockText,
+      blocks: blocks,
+      lines: lines,
+      elements: elements,
+      imageWidth: 1080,
+      imageHeight: 1920,
+      isMock: true,
+    );
   }
 
   void dispose() {
     _textRecognizer?.close();
+    _textRecognizer = null;
   }
 }

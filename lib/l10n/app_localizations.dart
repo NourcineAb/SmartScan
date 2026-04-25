@@ -1293,6 +1293,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save your data to the cloud'**
   String get settings_save_data_cloud;
+
+  /// No description provided for @welcome_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to SmartScan'**
+  String get welcome_title;
+
+  /// No description provided for @welcome_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your intelligent document scanning companion'**
+  String get welcome_subtitle;
+
+  /// No description provided for @welcome_description.
+  ///
+  /// In en, this message translates to:
+  /// **'SmartScan uses advanced AI and ML Kit technology to extract text from documents, recognize entities, detect document types, and provide instant translations.'**
+  String get welcome_description;
+
+  /// No description provided for @welcome_features_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Key Features'**
+  String get welcome_features_title;
+
+  /// No description provided for @welcome_feature_ocr.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced OCR with text recognition'**
+  String get welcome_feature_ocr;
+
+  /// No description provided for @welcome_feature_entities.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart entity extraction (dates, addresses, phones)'**
+  String get welcome_feature_entities;
+
+  /// No description provided for @welcome_feature_types.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic document type detection'**
+  String get welcome_feature_types;
+
+  /// No description provided for @welcome_feature_translation.
+  ///
+  /// In en, this message translates to:
+  /// **'Real-time translation in 15+ languages'**
+  String get welcome_feature_translation;
+
+  /// No description provided for @welcome_feature_reminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart reminder suggestions'**
+  String get welcome_feature_reminders;
+
+  /// No description provided for @welcome_get_started.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get welcome_get_started;
+
+  /// No description provided for @welcome_learn_more.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn More'**
+  String get welcome_learn_more;
+
+  /// No description provided for @about_title.
+  ///
+  /// In en, this message translates to:
+  /// **'About SmartScan'**
+  String get about_title;
+
+  /// No description provided for @about_version.
+  ///
+  /// In en, this message translates to:
+  /// **'Version 1.0.0'**
+  String get about_version;
+
+  /// No description provided for @about_description.
+  ///
+  /// In en, this message translates to:
+  /// **'SmartScan is a production-ready OCR and document scanning application built with Flutter.'**
+  String get about_description;
+
+  /// No description provided for @about_api_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Technologies & APIs'**
+  String get about_api_title;
+
+  /// No description provided for @about_api_mlk.
+  ///
+  /// In en, this message translates to:
+  /// **'Google ML Kit - Text Recognition, Entity Extraction, Language ID, Translation'**
+  String get about_api_mlk;
+
+  /// No description provided for @about_api_firebase.
+  ///
+  /// In en, this message translates to:
+  /// **'Firebase - Analytics, Storage'**
+  String get about_api_firebase;
+
+  /// No description provided for @about_api_ocr.
+  ///
+  /// In en, this message translates to:
+  /// **'On-device OCR processing'**
+  String get about_api_ocr;
+
+  /// No description provided for @about_open_source.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Source Libraries'**
+  String get about_open_source;
+
+  /// No description provided for @about_privacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy First'**
+  String get about_privacy;
+
+  /// No description provided for @about_privacy_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'All processing is done on-device. Your documents never leave your phone unless you choose to sync.'**
+  String get about_privacy_desc;
+
+  /// No description provided for @about_copyright.
+  ///
+  /// In en, this message translates to:
+  /// **'© 2026 SmartScan. All rights reserved.'**
+  String get about_copyright;
 }
 
 class _AppLocalizationsDelegate

@@ -94,7 +94,7 @@ class DatabaseService {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Create scans table
+    // Create scans table with all new fields
     await db.execute('''
       CREATE TABLE ${AppConstants.tableScans} (
         id TEXT PRIMARY KEY,
@@ -106,6 +106,14 @@ class DatabaseService {
         target_language TEXT,
         category_id TEXT,
         entities_json TEXT,
+        bounding_boxes_json TEXT,
+        document_type TEXT,
+        document_type_confidence REAL,
+        reminder_suggestion TEXT,
+        suggested_reminder_date TEXT,
+        reminder_dismissed INTEGER DEFAULT 0,
+        image_width INTEGER,
+        image_height INTEGER,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         is_synced INTEGER DEFAULT 0
@@ -151,6 +159,46 @@ class DatabaseService {
           translated_text TEXT NOT NULL,
           created_at TEXT NOT NULL
         )
+      ''');
+    }
+
+    // Upgrade from version 2 to 3: Add new scan fields
+    if (oldVersion < 3) {
+      // Add bounding boxes column
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN bounding_boxes_json TEXT
+      ''');
+      // Add document type columns
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN document_type TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN document_type_confidence REAL
+      ''');
+      // Add reminder columns
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN reminder_suggestion TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN suggested_reminder_date TEXT
+      ''');
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN reminder_dismissed INTEGER DEFAULT 0
+      ''');
+      // Add image dimensions columns
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN image_width INTEGER
+      ''');
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN image_height INTEGER
       ''');
     }
   }

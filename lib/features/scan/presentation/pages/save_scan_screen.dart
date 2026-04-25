@@ -6,18 +6,38 @@ import 'package:smart_scan/core/services/database_service.dart';
 import 'package:smart_scan/features/scan/data/repositories/scan_repository.dart';
 import 'package:smart_scan/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import 'package:smart_scan/shared/models/category_model.dart';
+import 'package:smart_scan/shared/models/entity_model.dart';
+import 'package:smart_scan/shared/models/bounding_box_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_scan/core/services/feedback_service.dart';
+import 'package:smart_scan/core/theme/app_colors.dart';
+import 'package:smart_scan/l10n/app_localizations.dart';
 
 /// Screen shown after OCR to let the user title + categorise + save the scan.
 class SaveScanScreen extends StatefulWidget {
   final String imagePath;
   final String extractedText;
+  final List<EntityModel>? entities;
+  final String? detectedLanguage;
+  final String? documentType;
+  final double? documentTypeConfidence;
+  final List<BoundingBoxModel>? boundingBoxes;
+  final Map<String, double>? smartCropRegion;
+  final int? imageWidth;
+  final int? imageHeight;
 
   const SaveScanScreen({
     super.key,
     required this.imagePath,
     required this.extractedText,
+    this.entities,
+    this.detectedLanguage,
+    this.documentType,
+    this.documentTypeConfidence,
+    this.boundingBoxes,
+    this.smartCropRegion,
+    this.imageWidth,
+    this.imageHeight,
   });
 
   @override
@@ -443,6 +463,54 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
 
             const SizedBox(height: 16),
 
+            // ── Document Analysis Results ──────────────────────────────
+            if (widget.documentType != null && widget.documentType != 'unknown')
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildInfoCard(
+                  icon: Icons.document_scanner,
+                  iconColor: Colors.blue,
+                  title: 'Document Type',
+                  content: '${widget.documentType} ${widget.documentTypeConfidence != null ? '(${(widget.documentTypeConfidence! * 100).toStringAsFixed(0)}%)' : ''}',
+                ),
+              ),
+
+            if (widget.detectedLanguage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _buildInfoCard(
+                  icon: Icons.language,
+                  iconColor: Colors.green,
+                  title: 'Detected Language',
+                  content: widget.detectedLanguage!.toUpperCase(),
+                ),
+              ),
+
+            // ── Extracted Entities ────────────────────────────────────
+            if (widget.entities != null && widget.entities!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Detected Entities',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: widget.entities!.map((entity) {
+                        return _buildEntityChip(entity);
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 16),
+
             // ── Extracted Text ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -714,5 +782,126 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
       'assignment': Icons.assignment,
     };
     return map[iconName] ?? Icons.category;
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String content,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: iconColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: iconColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  content,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntityChip(EntityModel entity) {
+    final color = _getEntityColor(entity.type);
+    final icon = _getEntityIcon(entity.type);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            entity.text.length > 20 ? '${entity.text.substring(0, 20)}...' : entity.text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getEntityColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'email':
+        return AppColors.entityEmail;
+      case 'phone':
+        return AppColors.entityPhone;
+      case 'url':
+        return AppColors.entityUrl;
+      case 'date':
+        return AppColors.entityDate;
+      case 'location':
+      case 'address':
+        return AppColors.entityLocation;
+      case 'price':
+        return AppColors.entityPrice;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  IconData _getEntityIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'email':
+        return Icons.email;
+      case 'phone':
+        return Icons.phone;
+      case 'url':
+        return Icons.link;
+      case 'date':
+        return Icons.calendar_today;
+      case 'location':
+      case 'address':
+        return Icons.location_on;
+      case 'price':
+        return Icons.attach_money;
+      default:
+        return Icons.label;
+    }
   }
 }

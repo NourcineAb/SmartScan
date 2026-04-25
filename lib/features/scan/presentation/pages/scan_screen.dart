@@ -4,6 +4,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:smart_scan/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import '../../data/services/ocr_service.dart';
+import '../../../../core/services/entity_extraction_service.dart';
+import '../../../../core/services/document_type_service.dart';
+import '../../../../core/services/language_service.dart';
+import '../../../../shared/models/entity_model.dart';
+import '../../../../shared/models/bounding_box_model.dart';
 import 'ocr_preview_screen.dart';
 import 'save_scan_screen.dart';
 import 'image_cropper_screen.dart';
@@ -145,34 +150,40 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
         ),
       );
 
-      // Extract text from image with crop zone
+      // Extract structured text from image with crop zone
       final ocrService = OCRService();
-      final extractedText = await ocrService.extractTextFromImage(
+      final ocrResult = await ocrService.extractStructuredText(
         image.path,
         cropZone: cropData,
       );
 
+      // Detect language
+      final languageService = LanguageService();
+      final detectedLanguage = await languageService.detectLanguage(ocrResult.fullText);
+
+      // Extract entities
+      final entityService = EntityExtractionService();
+      final entities = await entityService.extractEntities(ocrResult.fullText);
+
+      // Detect document type
+      final docTypeService = DocumentTypeService();
+      final docTypeResult = docTypeService.detectDocumentType(ocrResult.fullText, entities);
+
       if (!mounted) return;
       Navigator.pop(context); // Close loading dialog
 
-      // Navigate to preview screen
-      Navigator.of(context)
-          .push(
-        MaterialPageRoute(
-          builder: (context) => OCRPreviewScreen(
-            imagePath: image.path,
-            extractedText: extractedText,
-          ),
-        ),
-      )
-          .then((result) {
-        if (result != null && result is Map) {
-          _navigateToSave(
-            extractedText: result['text'] as String,
-            imagePath: result['imagePath'] as String,
-          );
-        }
-      });
+      // Navigate directly to save screen with all OCR data
+      _navigateToSave(
+        extractedText: ocrResult.fullText,
+        imagePath: image.path,
+        boundingBoxes: ocrResult.elements,
+        entities: entities,
+        detectedLanguage: detectedLanguage,
+        documentType: docTypeResult.type,
+        documentTypeConfidence: docTypeResult.confidence,
+        imageWidth: ocrResult.imageWidth,
+        imageHeight: ocrResult.imageHeight,
+      );
     } catch (e) {
       if (mounted) {
         Navigator.pop(context); // Close loading dialog if still open
@@ -186,6 +197,13 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
   void _navigateToSave({
     required String extractedText,
     required String imagePath,
+    List<BoundingBoxModel>? boundingBoxes,
+    List<EntityModel>? entities,
+    String? detectedLanguage,
+    String? documentType,
+    double? documentTypeConfidence,
+    int? imageWidth,
+    int? imageHeight,
   }) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -198,6 +216,13 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
               child: SaveScanScreen(
                 extractedText: extractedText,
                 imagePath: imagePath,
+                boundingBoxes: boundingBoxes,
+                entities: entities,
+                detectedLanguage: detectedLanguage,
+                documentType: documentType,
+                documentTypeConfidence: documentTypeConfidence,
+                imageWidth: imageWidth,
+                imageHeight: imageHeight,
               ),
             );
           } catch (_) {
@@ -205,6 +230,13 @@ class _ScanScreenState extends State<ScanScreen> with WidgetsBindingObserver {
             return SaveScanScreen(
               extractedText: extractedText,
               imagePath: imagePath,
+              boundingBoxes: boundingBoxes,
+              entities: entities,
+              detectedLanguage: detectedLanguage,
+              documentType: documentType,
+              documentTypeConfidence: documentTypeConfidence,
+              imageWidth: imageWidth,
+              imageHeight: imageHeight,
             );
           }
         },

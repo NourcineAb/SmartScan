@@ -229,5 +229,29 @@
   "settings_app_reminders": "Rappels pour utiliser l'application",
   
   "settings_cloud_sync": "Synchronisation cloud",
-  "settings_save_data_cloud": "Sauvegarder vos données dans le cloud"
+  "settings_save_data_cloud": "Sauvegarder vos données dans le cloud",
+
+  "welcome_title": "Bienvenue sur SmartScan",
+  "welcome_subtitle": "Votre compagnon intelligent de numérisation",
+  "welcome_description": "SmartScan utilise l'IA avancée et la technologie ML Kit pour extraire le texte des documents, reconnaître les entités, détecter les types de documents et fournir des traductions instantanées.",
+  "welcome_features_title": "Fonctionnalités clés",
+  "welcome_feature_ocr": "OCR avancé avec reconnaissance de texte",
+  "welcome_feature_entities": "Extraction intelligente d'entités (dates, adresses, téléphones)",
+  "welcome_feature_types": "Détection automatique des types de documents",
+  "welcome_feature_translation": "Traduction en temps réel dans 15+ langues",
+  "welcome_feature_reminders": "Suggestions de rappels intelligents",
+  "welcome_get_started": "Commencer",
+  "welcome_learn_more": "En savoir plus",
+
+  "about_title": "À propos de SmartScan",
+  "about_version": "Version 1.0.0",
+  "about_description": "SmartScan est une application de numérisation et d'OCR de documents prête pour la production, construite avec Flutter.",
+  "about_api_title": "Technologies et API",
+  "about_api_mlk": "Google ML Kit - Reconnaissance de texte, Extraction d'entités, Identification de langue, Traduction",
+  "about_api_firebase": "Firebase - Analytics, Stockage",
+  "about_api_ocr": "Traitement OCR sur l'appareil",
+  "about_open_source": "Librairies Open Source",
+  "about_privacy": "Confidentialité d'abord",
+  "about_privacy_desc": "Tout le traitement est effectué sur l'appareil. Vos documents ne quittent jamais votre téléphone sauf si vous choisissez de synchroniser.",
+  "about_copyright": "© 2026 SmartScan. Tous droits réservés."
 }

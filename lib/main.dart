@@ -7,10 +7,11 @@ import 'core/services/locale_service.dart';
 import 'core/utils/vibration_manager.dart';
 import 'core/utils/sound_manager.dart';
 import 'core/theme/app_theme.dart';
-import 'features/main/presentation/pages/main_screen.dart';
+import 'features/main/presentation/pages/splash_screen.dart';
 import 'features/settings/presentation/bloc/settings_bloc.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/model_download_service.dart';
+import 'core/services/analytics_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +35,10 @@ void main() async {
 
   // Initialize notification service
   await NotificationService().initialize();
+
+  // Initialize analytics service
+  await AnalyticsService().initialize();
+  await AnalyticsService().logAppOpen();
 
   // Initialize haptic and sound managers
   await VibrationManager().initialize(prefs);
@@ -84,7 +89,7 @@ class MyApp extends StatelessWidget {
             );
           },
 
-          home: const MainScreen(),
+          home: const SplashScreen(),
         );
       },
     );

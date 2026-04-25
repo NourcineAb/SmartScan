@@ -11,7 +11,7 @@ import 'package:smart_scan/features/scan/presentation/pages/export_options_scree
 import 'package:smart_scan/features/history/presentation/pages/search_scans_screen.dart';
 import 'package:smart_scan/core/utils/page_transition_utils.dart';
 import 'package:smart_scan/features/scan/presentation/pages/text_editor_screen.dart';
-import 'package:smart_scan/features/scan/data/services/export_service.dart';
+import 'package:smart_scan/core/services/export_service.dart';
 import 'package:smart_scan/core/services/database_service.dart';
 import '../bloc/history_bloc.dart';
 
@@ -788,11 +788,13 @@ class _TranslationCard extends StatelessWidget {
                               onTap: () async {
                                 Navigator.pop(context);
                                 try {
-                                  await ExportService().exportToPDF(
-                                    text: translatedText,
-                                    language: targetLang,
-                                    fileName:
-                                        'Translation_${translation['id']}',
+                                  await ExportService().exportTranslation(
+                                    title: 'Translation_${translation['id']}',
+                                    originalText: translation['original_text'] ?? '',
+                                    translatedText: translatedText,
+                                    sourceLanguage: translation['source_language'] ?? 'auto',
+                                    targetLanguage: targetLang,
+                                    format: 'pdf',
                                   );
                                   await FeedbackService().onSuccess();
                                 } catch (e) {
@@ -806,11 +808,13 @@ class _TranslationCard extends StatelessWidget {
                               onTap: () async {
                                 Navigator.pop(context);
                                 try {
-                                  await ExportService().exportToWord(
-                                    text: translatedText,
-                                    language: targetLang,
-                                    fileName:
-                                        'Translation_${translation['id']}',
+                                  await ExportService().exportTranslation(
+                                    title: 'Translation_${translation['id']}',
+                                    originalText: translation['original_text'] ?? '',
+                                    translatedText: translatedText,
+                                    sourceLanguage: translation['source_language'] ?? 'auto',
+                                    targetLanguage: targetLang,
+                                    format: 'docx',
                                   );
                                   await FeedbackService().onSuccess();
                                 } catch (e) {
@@ -824,11 +828,13 @@ class _TranslationCard extends StatelessWidget {
                               onTap: () async {
                                 Navigator.pop(context);
                                 try {
-                                  await ExportService().exportToText(
-                                    text: translatedText,
-                                    language: targetLang,
-                                    fileName:
-                                        'Translation_${translation['id']}',
+                                  await ExportService().exportTranslation(
+                                    title: 'Translation_${translation['id']}',
+                                    originalText: translation['original_text'] ?? '',
+                                    translatedText: translatedText,
+                                    sourceLanguage: translation['source_language'] ?? 'auto',
+                                    targetLanguage: targetLang,
+                                    format: 'xml',
                                   );
                                   await FeedbackService().onSuccess();
                                 } catch (e) {

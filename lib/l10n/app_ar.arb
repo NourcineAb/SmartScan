@@ -228,5 +228,29 @@
   "settings_app_reminders": "تذكيرات استخدام التطبيق",
   
   "settings_cloud_sync": "المزامنة السحابية",
-  "settings_save_data_cloud": "حفظ بياناتك في السحابة"
+  "settings_save_data_cloud": "حفظ بياناتك في السحابة",
+
+  "welcome_title": "مرحباً بك في SmartScan",
+  "welcome_subtitle": "رفيقك الذكي في مسح المستندات",
+  "welcome_description": "يستخدم SmartScan الذكاء الاصطناعي المتقدم وتقنية ML Kit لاستخراج النصوص من المستندات والتعرف على الكيانات واكتشاف أنواع المستندات وتقديم الترجمات الفورية.",
+  "welcome_features_title": "الميزات الرئيسية",
+  "welcome_feature_ocr": "OCR متقدم مع التعرف على النص",
+  "welcome_feature_entities": "استخراج ذكي للكيانات (تواريخ، عناوين، هواتف)",
+  "welcome_feature_types": "اكتشاف تلقائي لأنواع المستندات",
+  "welcome_feature_translation": "ترجمة فورية بأكثر من 15 لغة",
+  "welcome_feature_reminders": "اقتراحات ذكية للتذكير",
+  "welcome_get_started": "البدء",
+  "welcome_learn_more": "معرفة المزيد",
+
+  "about_title": "حول SmartScan",
+  "about_version": "الإصدار 1.0.0",
+  "about_description": "SmartScan هو تطبيق مسح وOCR للمستندات جاهز للإنتاج، مبني باستخدام Flutter.",
+  "about_api_title": "التقنيات وواجهات برمجة التطبيقات",
+  "about_api_mlk": "Google ML Kit - التعرف على النص، استخراج الكيانات، تحديد اللغة، الترجمة",
+  "about_api_firebase": "Firebase - التحليلات، التخزين",
+  "about_api_ocr": "معالجة OCR على الجهاز",
+  "about_open_source": "المكتبات مفتوحة المصدر",
+  "about_privacy": "الخصوصية أولاً",
+  "about_privacy_desc": "جميع المعالجات تتم على الجهاز. مستنداتك لا تغادر هاتفك أبداً إلا إذا اخترت المزامنة.",
+  "about_copyright": "© 2026 SmartScan. جميع الحقوق محفوظة."
 }

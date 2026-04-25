@@ -57,14 +57,30 @@ class ScanOCRInProgress extends ScanState {
   int get hashCode => 2;
 }
 
-/// OCR is completed with extracted text
+/// OCR is completed with extracted text and bounding boxes
 class ScanOCRCompleted extends ScanState {
   final String extractedText;
   final String imagePath;
+  final List<BoundingBoxModel>? boundingBoxes;
+  final List<EntityModel>? entities;
+  final String? detectedLanguage;
+  final String? documentType;
+  final double? documentTypeConfidence;
+  final Map<String, double>? smartCropRegion;
+  final int? imageWidth;
+  final int? imageHeight;
 
   const ScanOCRCompleted({
     required this.extractedText,
     required this.imagePath,
+    this.boundingBoxes,
+    this.entities,
+    this.detectedLanguage,
+    this.documentType,
+    this.documentTypeConfidence,
+    this.smartCropRegion,
+    this.imageWidth,
+    this.imageHeight,
   });
 
   @override
@@ -137,7 +153,13 @@ class ScanSavingInProgress extends ScanState {
 
 /// Scan has been successfully saved
 class ScanSaveCompleted extends ScanState {
-  const ScanSaveCompleted();
+  final String scanId;
+  final ReminderSuggestion? reminderSuggestion;
+
+  const ScanSaveCompleted({
+    required this.scanId,
+    this.reminderSuggestion,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -145,6 +167,41 @@ class ScanSaveCompleted extends ScanState {
 
   @override
   int get hashCode => 5;
+}
+
+/// Smart crop region detected and applied
+class ScanSmartCropApplied extends ScanState {
+  final Map<String, double> cropRegion;
+  final String imagePath;
+
+  const ScanSmartCropApplied({
+    required this.cropRegion,
+    required this.imagePath,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ScanSmartCropApplied &&
+          runtimeType == other.runtimeType &&
+          cropRegion == other.cropRegion;
+
+  @override
+  int get hashCode => cropRegion.hashCode;
+}
+
+/// Reminder suggestion dismissed
+class ScanReminderDismissed extends ScanState {
+  final String scanId;
+
+  const ScanReminderDismissed({required this.scanId});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is ScanReminderDismissed;
+
+  @override
+  int get hashCode => 7;
 }
 
 /// Scan operation was cancelled
