@@ -632,6 +632,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_timezone:
+    dependency: "direct main"
+    description:
+      name: flutter_timezone
+      sha256: ea53c61c9152f271a5e30624a624184804947b6a733ff2b64186bb2579446892
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -661,6 +669,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.1.0"
+  google_generative_ai:
+    dependency: "direct main"
+    description:
+      name: google_generative_ai
+      sha256: "71f613d0247968992ad87a0eb21650a566869757442ba55a31a81be6746e0d1f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.7"
   google_mlkit_commons:
     dependency: transitive
     description:
@@ -669,6 +685,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.1"
+  google_mlkit_document_scanner:
+    dependency: "direct main"
+    description:
+      name: google_mlkit_document_scanner
+      sha256: a4f0266255eeca3b98bd00b00153661f159c27ff6102de963a1155e25c8fc77d
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.1"
   google_mlkit_entity_extraction:
     dependency: "direct main"
     description:
@@ -1077,6 +1101,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.4"
+  pedantic:
+    dependency: transitive
+    description:
+      name: pedantic
+      sha256: "67fc27ed9639506c856c840ccce7594d0bdcd91bc8d53d6e52359449a1d50602"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.11.1"
   permission_handler:
     dependency: "direct main"
     description:
@@ -1314,6 +1346,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.2"
+  speech_to_text:
+    dependency: "direct main"
+    description:
+      name: speech_to_text
+      sha256: c07557664974afa061f221d0d4186935bea4220728ea9446702825e8b988db04
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.3.0"
+  speech_to_text_platform_interface:
+    dependency: transitive
+    description:
+      name: speech_to_text_platform_interface
+      sha256: a1935847704e41ee468aad83181ddd2423d0833abe55d769c59afca07adb5114
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.0"
+  speech_to_text_windows:
+    dependency: transitive
+    description:
+      name: speech_to_text_windows
+      sha256: "2c9846d18253c7bbe059a276297ef9f27e8a2745dead32192525beb208195072"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0+beta.8"
   sqflite:
     dependency: "direct main"
     description:
@@ -1411,7 +1467,7 @@ packages:
     source: hosted
     version: "0.7.7"
   timezone:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: timezone
       sha256: "784a5e34d2eb62e1326f24d6f600aaaee452eb8ca8ef2f384a59244e292d158b"

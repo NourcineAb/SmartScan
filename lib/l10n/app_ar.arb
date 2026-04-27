@@ -252,5 +252,11 @@
   "about_open_source": "المكتبات مفتوحة المصدر",
   "about_privacy": "الخصوصية أولاً",
   "about_privacy_desc": "جميع المعالجات تتم على الجهاز. مستنداتك لا تغادر هاتفك أبداً إلا إذا اخترت المزامنة.",
-  "about_copyright": "© 2026 SmartScan. جميع الحقوق محفوظة."
+  "about_copyright": "© 2026 SmartScan. جميع الحقوق محفوظة.",
+  "scan_mode_selection_title": "اختر وضع المسح",
+  "scan_mode_single": "صفحة واحدة",
+  "scan_mode_batch": "وضع الدفعات",
+  "scan_mode_single_desc": "مسح صفحة واحدة ومعالجتها على الفور",
+  "scan_mode_batch_desc": "مسح صفحات متعددة ومعالجتها جميعاً مرة واحدة",
+  "start_scan_button": "ابدأ المسح"
 }

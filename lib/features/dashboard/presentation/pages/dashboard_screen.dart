@@ -44,13 +44,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DashboardBloc(
-        scanRepository: ScanRepository(),
-        categoryRepository: CategoryRepository(),
-      )..add(const LoadDashboardStatsEvent()),
-      child: Scaffold(
-        appBar: AppBar(
+    return Scaffold(
+      appBar: AppBar(
           title: const Text('SmartScan'),
           elevation: 0,
           actions: [
@@ -106,8 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildHeader() {
@@ -124,39 +118,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Stack(
             children: [
               // Glassmorphic background with backdrop filter
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [startGradient, endGradient],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDarkMode
-                                ? AppColors.coral.withValues(alpha: 0.15)
-                                : AppColors.primary.withValues(alpha: 0.12),
-                            blurRadius: 20,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                    ),
+              // Semi-transparent background
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      startGradient.withValues(alpha: 0.9),
+                      endGradient.withValues(alpha: 0.9)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDarkMode
+                          ? AppColors.coral.withValues(alpha: 0.15)
+                          : AppColors.primary.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
               ),
               // Content
@@ -280,43 +267,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildGlassmorphicStatCard(
-                            icon: Icons.description,
-                            label: l10n?.stats_scans ?? 'Scans',
-                            value: stats.totalScans.toString(),
-                            color: AppColors.primary,
-                            isDarkMode: isDarkMode,
-                          ),
-                          const SizedBox(width: 12),
-                          _buildGlassmorphicStatCard(
-                            icon: Icons.category,
-                            label: l10n?.stats_categories ?? 'Categories',
-                            value: stats.totalCategories.toString(),
-                            color: AppColors.secondary,
-                            isDarkMode: isDarkMode,
-                          ),
-                          const SizedBox(width: 12),
-                          _buildGlassmorphicStatCard(
-                            icon: Icons.language,
-                            label: l10n?.stats_languages ?? 'Languages',
-                            value: stats.totalLanguagesUsed.toString(),
-                            color: AppColors.accent,
-                            isDarkMode: isDarkMode,
-                          ),
-                          const SizedBox(width: 12),
-                          _buildGlassmorphicStatCard(
-                            icon: Icons.storage,
-                            label: l10n?.stats_storage ?? 'Storage',
-                            value: stats.totalStorageUsed,
-                            color: Colors.orange,
-                            isDarkMode: isDarkMode,
-                          ),
-                        ],
-                      ),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1.0,
+                      children: [
+                        _buildGlassmorphicStatCard(
+                          icon: Icons.description,
+                          label: l10n?.stats_scans ?? 'Scans',
+                          value: stats.totalScans.toString(),
+                          color: AppColors.primary,
+                          isDarkMode: isDarkMode,
+                        ),
+                        _buildGlassmorphicStatCard(
+                          icon: Icons.category,
+                          label: l10n?.stats_categories ?? 'Categories',
+                          value: stats.totalCategories.toString(),
+                          color: AppColors.secondary,
+                          isDarkMode: isDarkMode,
+                        ),
+                        _buildGlassmorphicStatCard(
+                          icon: Icons.language,
+                          label: l10n?.stats_languages ?? 'Languages',
+                          value: stats.totalLanguagesUsed.toString(),
+                          color: AppColors.accent,
+                          isDarkMode: isDarkMode,
+                        ),
+                        _buildGlassmorphicStatCard(
+                          icon: Icons.storage,
+                          label: l10n?.stats_storage ?? 'Storage',
+                          value: stats.totalStorageUsed,
+                          color: Colors.orange,
+                          isDarkMode: isDarkMode,
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -341,96 +328,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required Color color,
     required bool isDarkMode,
   }) {
-    return Container(
-      width: 160,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                colors: [
-                  color.withValues(alpha: isDarkMode ? 0.2 : 0.15),
-                  color.withValues(alpha: isDarkMode ? 0.1 : 0.05),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.15),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 8),
-                ),
-                BoxShadow(
-                  color: color.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [
+              color.withValues(alpha: isDarkMode ? 0.25 : 0.2),
+              color.withValues(alpha: isDarkMode ? 0.15 : 0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.15),
+              blurRadius: 16,
+              spreadRadius: 0,
+              offset: const Offset(0, 8),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Icon with circular background
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [color, color.withValues(alpha: 0.6)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.25),
-                          blurRadius: 8,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, size: 24, color: Colors.white),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Icon with circular background
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [color, color.withValues(alpha: 0.6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  const SizedBox(height: 12),
-                  // Large Bold Value (DM Sans equivalent)
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : AppColors.textPrimary,
-                      letterSpacing: -0.5,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.25),
+                      blurRadius: 8,
+                      spreadRadius: 0,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Subtle Label
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isDarkMode
-                          ? Colors.white.withValues(alpha: 0.6)
-                          : AppColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
+                child: Icon(icon, size: 20, color: Colors.white),
               ),
-            ),
+              const SizedBox(height: 8),
+              // Large Bold Value (DM Sans equivalent)
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : AppColors.textPrimary,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Subtle Label
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDarkMode
+                      ? Colors.white.withValues(alpha: 0.6)
+                      : AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),
@@ -438,108 +413,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildGlassmorphicLoadingCard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [
-                Colors.blue.withValues(alpha: 0.1),
-                Colors.blue.withValues(alpha: 0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.withValues(alpha: 0.1),
-                blurRadius: 16,
-                spreadRadius: 0,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blue.withValues(alpha: 0.15),
+            Colors.blue.withValues(alpha: 0.08),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withValues(alpha: 0.1),
+            blurRadius: 16,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Loading statistics...',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
             ),
-          ),
+            const SizedBox(width: 12),
+            Text(
+              'Loading statistics...',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildErrorCard(String message) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [
-                Colors.red.withValues(alpha: 0.15),
-                Colors.red.withValues(alpha: 0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(
-              color: Colors.red.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.withValues(alpha: 0.1),
-                blurRadius: 16,
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            Colors.red.withValues(alpha: 0.2),
+            Colors.red.withValues(alpha: 0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: Colors.red.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withValues(alpha: 0.1),
+            blurRadius: 16,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red[700], size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      color: Colors.red[700],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red[700], size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: Colors.red[700],
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -696,85 +658,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
               scale: 1.0,
               duration: const Duration(milliseconds: 150),
               curve: Curves.easeOut,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      gradient: LinearGradient(
-                        colors: [
-                          color.withValues(alpha: isDarkMode ? 0.3 : 0.4),
-                          color.withValues(alpha: isDarkMode ? 0.15 : 0.2),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.2),
-                          blurRadius: 16,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.08),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: isDarkMode ? 0.35 : 0.45),
+                      color.withValues(alpha: isDarkMode ? 0.2 : 0.25),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.2),
+                      blurRadius: 16,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 8),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Icon Circle
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [color, color.withValues(alpha: 0.7)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: color.withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              icon,
-                              size: 32,
-                              color: Colors.white,
-                            ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Icon Circle
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [color, color.withValues(alpha: 0.7)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          const SizedBox(height: 12),
-                          // Label
-                          Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  isDarkMode ? Colors.white : Color(0xFF1A1A2E),
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              spreadRadius: 1,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 32,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      // Label
+                      Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isDarkMode ? Colors.white : Color(0xFF1A1A2E),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

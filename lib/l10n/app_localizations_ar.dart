@@ -692,4 +692,29 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get about_copyright => '© 2026 SmartScan. جميع الحقوق محفوظة.';
+
+  @override
+  String get scan_mode_selection_title => 'اختر وضع المسح';
+
+  @override
+  String get scan_mode_single => 'صفحة واحدة';
+
+  @override
+  String get scan_mode_batch => 'وضع الدفعات';
+
+  @override
+  String get scan_mode_single_desc => 'مسح صفحة واحدة ومعالجتها على الفور';
+
+  @override
+  String get scan_mode_batch_desc =>
+      'مسح صفحات متعددة ومعالجتها جميعاً مرة واحدة';
+
+  @override
+  String get start_scan_button => 'ابدأ المسح';
+
+  @override
+  String get upload_single => 'Upload from Gallery';
+
+  @override
+  String get upload_batch => 'Upload multiple images';
 }

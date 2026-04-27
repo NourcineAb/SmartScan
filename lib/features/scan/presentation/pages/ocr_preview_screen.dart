@@ -101,7 +101,7 @@ class _OCRPreviewScreenState extends State<OCRPreviewScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey[300]!, width: 1),
               ),
@@ -122,9 +122,9 @@ class _OCRPreviewScreenState extends State<OCRPreviewScreen> {
                       _currentText.isEmpty
                           ? 'No text detected'
                           : _currentText,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
-                        color: Colors.black87,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],

@@ -254,5 +254,13 @@
   "about_open_source": "Open Source Libraries",
   "about_privacy": "Privacy First",
   "about_privacy_desc": "All processing is done on-device. Your documents never leave your phone unless you choose to sync.",
-  "about_copyright": "© 2026 SmartScan. All rights reserved."
+  "about_copyright": "© 2026 SmartScan. All rights reserved.",
+  "scan_mode_selection_title": "Choose Scan Mode",
+  "scan_mode_single": "Single Page",
+  "scan_mode_batch": "Batch Mode",
+  "scan_mode_single_desc": "Scan one page and process it immediately",
+  "scan_mode_batch_desc": "Scan multiple pages and process them all at once",
+  "start_scan_button": "Start Scanning",
+  "upload_single": "Upload from Gallery",
+  "upload_batch": "Upload multiple images"
 }

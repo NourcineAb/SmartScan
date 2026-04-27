@@ -25,14 +25,24 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     try {
       emit(const CategoryLoading());
       final categories = await categoryRepository.getAllCategoriesAsync();
+      
       if (categories.isEmpty) {
         emit(const CategoryEmpty());
       } else {
-        emit(CategoriesLoaded(categories: categories));
+        final counts = await _getCategoryCounts(categories);
+        emit(CategoriesLoaded(categories: categories, documentCounts: counts));
       }
     } catch (e) {
       emit(CategoryError(message: 'Error loading categories: $e'));
     }
+  }
+
+  Future<Map<String, int>> _getCategoryCounts(List<CategoryModel> categories) async {
+    final Map<String, int> counts = {};
+    for (final category in categories) {
+      counts[category.id] = await categoryRepository.getScanCountByCategoryAsync(category.id);
+    }
+    return counts;
   }
 
   Future<void> _onAddCategory(
@@ -49,7 +59,8 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
       await FeedbackService().onSuccess();
       final updatedCategories =
           await categoryRepository.getAllCategoriesAsync();
-      emit(CategoriesLoaded(categories: updatedCategories));
+      final counts = await _getCategoryCounts(updatedCategories);
+      emit(CategoriesLoaded(categories: updatedCategories, documentCounts: counts));
       emit(CategoryAdded(category: newCategory));
     } catch (e) {
       await FeedbackService().onError();
@@ -75,7 +86,8 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
         await FeedbackService().onSuccess();
         final updatedCategories =
             await categoryRepository.getAllCategoriesAsync();
-        emit(CategoriesLoaded(categories: updatedCategories));
+        final counts = await _getCategoryCounts(updatedCategories);
+        emit(CategoriesLoaded(categories: updatedCategories, documentCounts: counts));
         emit(CategoryUpdated(category: updatedCategory));
       } else {
         await FeedbackService().onError();

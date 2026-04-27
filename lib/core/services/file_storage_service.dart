@@ -46,6 +46,7 @@ class FileStorageService {
   Future<String> saveImageForScan({
     required String scanId,
     required String sourceImagePath,
+    int index = 0,
   }) async {
     try {
       final sourceFile = File(sourceImagePath);
@@ -61,7 +62,8 @@ class FileStorageService {
 
       // Get file extension
       final extension = path.extension(sourceImagePath);
-      final filename = 'scan$extension';
+      // Use index to avoid overwriting in multi-page scans
+      final filename = 'page_$index$extension';
       final destPath = path.join(scanDir.path, filename);
 
       // Copy file to destination
@@ -71,6 +73,23 @@ class FileStorageService {
     } catch (e) {
       throw FileSystemException('Failed to save image for scan', e.toString());
     }
+  }
+
+  /// Save multiple images for a scan
+  Future<List<String>> saveImagesForScan({
+    required String scanId,
+    required List<String> sourceImagePaths,
+  }) async {
+    final List<String> savedPaths = [];
+    for (int i = 0; i < sourceImagePaths.length; i++) {
+      final savedPath = await saveImageForScan(
+        scanId: scanId,
+        sourceImagePath: sourceImagePaths[i],
+        index: i,
+      );
+      savedPaths.add(savedPath);
+    }
+    return savedPaths;
   }
 
   /// Get the image path for a scan (if it exists)

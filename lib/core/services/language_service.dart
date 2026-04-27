@@ -245,8 +245,9 @@ class LanguageService {
     return supportedLanguages.keys.toList();
   }
 
-  /// Dispose translators to free resources
-  void dispose() {
+  /// Reset translators to free resources
+  void reset() {
+    debugPrint('♻️ Resetting LanguageService...');
     _languageIdentifier?.close();
     _languageIdentifier = null;
     

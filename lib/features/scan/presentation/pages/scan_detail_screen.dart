@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:smart_scan/core/services/database_service.dart';
 import 'package:smart_scan/core/services/feedback_service.dart';
 import 'package:flutter/services.dart';
+import 'package:smart_scan/core/services/gemini_service.dart';
 import 'package:smart_scan/shared/widgets/bounding_box_overlay.dart';
 
 class ScanDetailScreen extends StatefulWidget {
@@ -27,13 +28,77 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
   bool _isEditing = false;
   bool _isSaving = false;
   String? _categoryName;
+  String? _currentSummary;
+  bool _isGeneratingSummary = false;
+  bool _hasGeminiApiKey = false;
+  final GeminiService _geminiService = GeminiService();
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.scan.title);
     _textController = TextEditingController(text: widget.scan.rawText ?? '');
+    _currentSummary = widget.scan.summary;
     _loadCategoryName();
+    _checkApiKey();
+  }
+
+  Future<void> _checkApiKey() async {
+    final hasKey = await _geminiService.hasApiKey();
+    if (mounted) {
+      setState(() {
+        _hasGeminiApiKey = hasKey;
+      });
+    }
+  }
+
+  Future<void> _generateSummary() async {
+    if (_textController.text.isEmpty) return;
+
+    setState(() {
+      _isGeneratingSummary = true;
+    });
+
+    try {
+      final String languageCode = Localizations.localeOf(context).languageCode;
+      final result = await _geminiService.generateSummaryAndCategory(
+        _textController.text,
+        targetLanguage: languageCode,
+      );
+      
+      if (result != null && result['summary'] != null && result['summary']!.isNotEmpty) {
+        final summary = result['summary']!;
+        // Save to database immediately
+        await _scanRepository.updateScan(
+          scanId: widget.scan.id,
+          summary: summary,
+        );
+
+        if (mounted) {
+          setState(() {
+            _currentSummary = summary;
+            _isGeneratingSummary = false;
+          });
+
+          // Update Bloc to refresh history screen
+          context.read<ScansBloc>().add(const RefreshScansEvent());
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isGeneratingSummary = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to generate summary')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isGeneratingSummary = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _loadCategoryName() async {
@@ -179,7 +244,10 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
   }
 
   Widget _buildImagePreview() {
-    if (widget.scan.imagePath == null || widget.scan.imagePath!.isEmpty) {
+    final images = widget.scan.additionalImages ??
+        (widget.scan.imagePath != null ? [widget.scan.imagePath!] : []);
+
+    if (images.isEmpty) {
       return Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: Center(
@@ -190,7 +258,8 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
               const SizedBox(height: 16),
               Text(
                 'Aucune image disponible',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -198,41 +267,115 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
       );
     }
 
-    try {
-      return GestureDetector(
-        onTap: () {
-          _showImageFullScreen(context, widget.scan.imagePath!);
-        },
-        child: Image.file(
-          File(widget.scan.imagePath!),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.broken_image, size: 64, color: Colors.red[400]),
-                    const SizedBox(height: 16),
-                    const Text('Image non trouvée'),
-                  ],
-                ),
-              ),
-            );
+    if (images.length == 1) {
+      return _buildSingleImagePreview(images.first);
+    }
+
+    return Stack(
+      children: [
+        PageView.builder(
+          itemCount: images.length,
+          itemBuilder: (context, index) {
+            return _buildSingleImagePreview(images[index], index: index);
           },
         ),
-      );
-    } catch (e) {
-      return Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Center(child: Text('Erreur: $e')),
-      );
-    }
+        Positioned(
+          bottom: 12,
+          right: 12,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.copy, color: Colors.white, size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  '${images.length} pages',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 8,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: Icon(Icons.chevron_left,
+                color: Colors.white.withValues(alpha: 0.5), size: 32),
+          ),
+        ),
+        Positioned(
+          right: 8,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: Icon(Icons.chevron_right,
+                color: Colors.white.withValues(alpha: 0.5), size: 32),
+          ),
+        ),
+      ],
+    );
   }
 
-  void _showImageFullScreen(BuildContext context, String imagePath) {
-    if (widget.scan.boundingBoxes != null && widget.scan.boundingBoxes!.isNotEmpty && widget.scan.imageWidth != null) {
+  Widget _buildSingleImagePreview(String imagePath, {int? index}) {
+    return GestureDetector(
+      onTap: () {
+        _showImageFullScreen(context, imagePath, index: index);
+      },
+      child: Image.file(
+        File(imagePath),
+        fit: BoxFit.cover,
+        cacheWidth: 1000, // Limit memory usage for detail preview
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.broken_image, size: 64, color: Colors.red[400]),
+                  const SizedBox(height: 16),
+                  const Text('Image non trouvée'),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showImageFullScreen(BuildContext context, String imagePath, {int? index}) {
+    final images = widget.scan.additionalImages ??
+        (widget.scan.imagePath != null ? [widget.scan.imagePath!] : []);
+
+    if (images.length > 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MultiImageFullScreenViewer(
+            imagePaths: images,
+            initialIndex: index ?? 0,
+            scan: widget.scan,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (widget.scan.boundingBoxes != null &&
+        widget.scan.boundingBoxes!.isNotEmpty &&
+        widget.scan.imageWidth != null) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -241,13 +384,15 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
             appBar: AppBar(
               backgroundColor: Colors.black,
               iconTheme: const IconThemeData(color: Colors.white),
-              title: const Text('Image & Highlights', style: TextStyle(color: Colors.white)),
+              title: const Text('Image & Highlights',
+                  style: TextStyle(color: Colors.white)),
             ),
             body: InteractiveBoundingBoxViewer(
               imagePath: imagePath,
               boundingBoxes: widget.scan.boundingBoxes!,
               entities: widget.scan.entities,
-              imageSize: Size(widget.scan.imageWidth!.toDouble(), widget.scan.imageHeight!.toDouble()),
+              imageSize: Size(widget.scan.imageWidth!.toDouble(),
+                  widget.scan.imageHeight!.toDouble()),
             ),
           ),
         ),
@@ -414,6 +559,69 @@ class _ScanDetailScreenState extends State<ScanDetailScreen> {
                   ],
                 ),
               ),
+
+              // AI Summary Section (if available)
+              if (widget.scan.summary != null && widget.scan.summary!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Résumé AI',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (_currentSummary == null && !_isGeneratingSummary)
+                            TextButton.icon(
+                              onPressed: _hasGeminiApiKey ? _generateSummary : null,
+                              icon: const Icon(Icons.auto_awesome, size: 16),
+                              label: Text(_hasGeminiApiKey ? 'Générer' : 'Clé manquante'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: _hasGeminiApiKey ? Colors.indigo : Colors.grey,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_isGeneratingSummary)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_currentSummary != null && _currentSummary!.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.indigo.withOpacity(0.1)),
+                          ),
+                          child: Text(
+                            _currentSummary!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              height: 1.5,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          'Aucun résumé généré pour ce document.',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14, fontStyle: FontStyle.italic),
+                        ),
+                    ],
+                  ),
+                ),
 
               const SizedBox(height: 24),
 
@@ -719,6 +927,7 @@ class _ImageFullScreenViewerState extends State<ImageFullScreenViewer> {
             maxScale: 4,
             child: Image.file(
               File(widget.imagePath),
+              cacheWidth: 1000,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return Center(
@@ -739,6 +948,96 @@ class _ImageFullScreenViewerState extends State<ImageFullScreenViewer> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Full-screen viewer for multiple images
+class MultiImageFullScreenViewer extends StatefulWidget {
+  final List<String> imagePaths;
+  final int initialIndex;
+  final ScanModel scan;
+
+  const MultiImageFullScreenViewer({
+    super.key,
+    required this.imagePaths,
+    required this.initialIndex,
+    required this.scan,
+  });
+
+  @override
+  State<MultiImageFullScreenViewer> createState() =>
+      _MultiImageFullScreenViewerState();
+}
+
+class _MultiImageFullScreenViewerState
+    extends State<MultiImageFullScreenViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          'Page ${_currentIndex + 1} / ${widget.imagePaths.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+      body: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.imagePaths.length,
+        onPageChanged: (index) {
+          setState(() => _currentIndex = index);
+        },
+        itemBuilder: (context, index) {
+          final imagePath = widget.imagePaths[index];
+
+          // If it's the first page and we have bounding boxes, we could show them
+          // but for simplicity in multi-page we'll just show the image
+          return InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Image.file(
+              File(imagePath),
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image,
+                          size: 80, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Image non trouvée',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }

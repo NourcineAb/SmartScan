@@ -134,17 +134,28 @@ class EntityExtractionService {
       }
     }
 
-    // URL pattern
+    // URL pattern (improved to detect URLs without http/https)
     final urlPattern = RegExp(
-      r'https?://(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)',
+      r'\b(?:https?://|www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z]{2,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)',
       caseSensitive: false,
     );
     for (final match in urlPattern.allMatches(text)) {
-      entities.add(EntityModel(
-        text: match.group(0)!,
-        type: 'url',
-        confidence: 0.95,
-      ));
+      final urlText = match.group(0)!;
+      // Filter out false positives by ensuring valid prefixes, common TLDs, or path segments
+      if (urlText.startsWith('http') || 
+          urlText.startsWith('www.') || 
+          urlText.endsWith('.com') || 
+          urlText.endsWith('.org') || 
+          urlText.endsWith('.net') || 
+          urlText.endsWith('.io') || 
+          urlText.endsWith('.co') || 
+          urlText.contains('/')) {
+        entities.add(EntityModel(
+          text: urlText,
+          type: 'url',
+          confidence: 0.90,
+        ));
+      }
     }
 
     // Price/Currency pattern
@@ -226,21 +237,21 @@ class EntityExtractionService {
   String getEntityIcon(String type) {
     switch (type.toLowerCase()) {
       case 'email':
-        return 'email';
+        return 'alternate_email';
       case 'phone':
-        return 'phone';
+        return 'call';
       case 'url':
-        return 'link';
+        return 'language';
       case 'date':
-        return 'calendar_today';
+        return 'event';
       case 'location':
       case 'address':
-        return 'location_on';
+        return 'place';
       case 'price':
       case 'money':
-        return 'attach_money';
+        return 'payments_outlined';
       default:
-        return 'label';
+        return 'label_important_outline';
     }
   }
 
@@ -266,7 +277,9 @@ class EntityExtractionService {
     }
   }
 
-  void dispose() {
+  /// Reset the service and free resources
+  void reset() {
+    debugPrint('♻️ Resetting EntityExtractionService...');
     _extractor?.close();
     _extractor = null;
   }

@@ -5,7 +5,7 @@ class AppConstants {
 
   // Database constants
   static const String databaseName = 'smartscan.db';
-  static const int databaseVersion = 3;
+  static const int databaseVersion = 5;
 
   // Table names
   static const String tableScans = 'scans';

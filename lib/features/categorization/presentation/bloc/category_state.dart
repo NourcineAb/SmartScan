@@ -31,18 +31,23 @@ class CategoryLoading extends CategoryState {
 /// Categories loaded successfully
 class CategoriesLoaded extends CategoryState {
   final List<CategoryModel> categories;
+  final Map<String, int> documentCounts;
 
-  const CategoriesLoaded({required this.categories});
+  const CategoriesLoaded({
+    required this.categories,
+    required this.documentCounts,
+  });
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is CategoriesLoaded &&
           runtimeType == other.runtimeType &&
-          categories == other.categories;
+          categories == other.categories &&
+          documentCounts == other.documentCounts;
 
   @override
-  int get hashCode => categories.hashCode;
+  int get hashCode => Object.hash(categories, documentCounts);
 }
 
 /// No categories available

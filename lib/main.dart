@@ -11,10 +11,34 @@ import 'features/main/presentation/pages/splash_screen.dart';
 import 'features/settings/presentation/bloc/settings_bloc.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/model_download_service.dart';
+import 'core/services/lifecycle_service.dart';
 import 'core/services/analytics_service.dart';
+import 'features/dashboard/presentation/bloc/dashboard_bloc.dart';
+import 'features/scan/data/repositories/scan_repository.dart';
+import 'features/categorization/data/repositories/category_repository.dart';
+
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase initialization failed: $e');
+  }
+
+  // ── Image Cache Limits ────────────────────────────────────────────────────
+  // Keep these conservative on budget devices. The ML Kit document scanner
+  // is a RAM-heavy native activity; leaving too much headroom for Flutter's
+  // image cache means there is less RAM available when the scanner launches.
+  PaintingBinding.instance.imageCache.maximumSize = 20; // Lower limit for stable startup
+  PaintingBinding.instance.imageCache.maximumSizeBytes =
+      15 * 1024 * 1024; // 15 MB (was 50 MB)
+
+  // Initialize Lifecycle Service for global cleanup
+  AppLifecycleService().initialize();
 
   final prefs = await SharedPreferences.getInstance();
 
@@ -44,15 +68,21 @@ void main() async {
   await VibrationManager().initialize(prefs);
   await SoundManager().initialize(prefs);
 
-  // Download translation models in background (fire-and-forget)
-  // Use a proper delayed task to ensure it actually runs
-  Future.delayed(Duration.zero, () {
-    ModelDownloadService().downloadAllModels();
-  });
+  // Removed automatic model downloads at startup to conserve memory.
+  // Models will be downloaded on demand in TranslationScreen.
+
 
   runApp(
-    BlocProvider(
-      create: (context) => SettingsBloc(prefs: prefs),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (context) => SettingsBloc(prefs: prefs)),
+        BlocProvider(
+          create: (context) => DashboardBloc(
+            scanRepository: ScanRepository(),
+            categoryRepository: CategoryRepository(),
+          )..add(const LoadDashboardStatsEvent()),
+        ),
+      ],
       child: const MyApp(),
     ),
   );
@@ -65,7 +95,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SettingsBloc, SettingsState>(
       builder: (context, settingsState) {
-        // Convertir le code de langue en Locale
         final locale = LocaleService.getLocaleByCode(settingsState.language);
         final isRTL = LocaleService.isLocaleRTL(locale);
 

@@ -27,8 +27,9 @@ dependencies:
   google_mlkit_text_recognition: ^0.15.1
   google_mlkit_language_id: ^0.13.1
   google_mlkit_translation: ^0.13.1
-  
   google_mlkit_entity_extraction: ^0.15.3
+  google_mlkit_document_scanner: ^0.4.1
+  google_generative_ai: any
 
   # Firebase
   firebase_core: ^3.12.1
@@ -59,6 +60,9 @@ dependencies:
   # Audio & Haptics
   audioplayers: ^6.4.0
   haptic_feedback: any
+  speech_to_text: ^7.0.0
+  timezone: ^0.11.0
+  flutter_timezone: ^3.0.1
 
   # Localization
   intl: ^0.20.0

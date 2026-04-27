@@ -253,5 +253,13 @@
   "about_open_source": "Librairies Open Source",
   "about_privacy": "Confidentialité d'abord",
   "about_privacy_desc": "Tout le traitement est effectué sur l'appareil. Vos documents ne quittent jamais votre téléphone sauf si vous choisissez de synchroniser.",
-  "about_copyright": "© 2026 SmartScan. Tous droits réservés."
+  "about_copyright": "© 2026 SmartScan. Tous droits réservés.",
+  "scan_mode_selection_title": "Choisir le mode de numérisation",
+  "scan_mode_single": "Page unique",
+  "scan_mode_batch": "Mode par lots",
+  "scan_mode_single_desc": "Numérisez une page et traitez-la immédiatement",
+  "scan_mode_batch_desc": "Numérisez plusieurs pages et traitez-les toutes en même temps",
+  "start_scan_button": "Commencer la numérisation",
+  "upload_single": "Importer depuis la galerie",
+  "upload_batch": "Importer plusieurs images"
 }

@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -33,6 +36,11 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+
+    // Initialize Timezone
+    tz.initializeTimeZones();
+    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
 
     _initialized = true;
   }
@@ -83,5 +91,80 @@ class NotificationService {
       notificationDetails: platformDetails,
       payload: filePath,
     );
+  }
+
+  Future<void> scheduleDateReminder({
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    if (kIsWeb) return;
+    await initialize();
+
+    // Ensure the date is in the future
+    if (scheduledDate.isBefore(DateTime.now())) {
+      // If it's today but time passed, or past date, don't schedule
+      // or schedule for 1 minute from now for demo purposes? 
+      // Let's just return for now.
+      return;
+    }
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'smartscan_reminders',
+      'Document Reminders',
+      channelDescription: 'Reminders for dates detected in scans',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await _plugin.zonedSchedule(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000) + 1,
+      title: 'Reminder: $title',
+      body: body,
+      scheduledDate: tz.TZDateTime.from(scheduledDate, tz.local),
+      notificationDetails: platformDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> showScannerNotification() async {
+    if (kIsWeb) return;
+    await initialize();
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'scanner_ongoing',
+      'Scanner Activity',
+      channelDescription: 'Keeps the app alive during document scanning',
+      importance: Importance.max,
+      priority: Priority.max,
+      ongoing: true, // This is key for persistence
+      autoCancel: false,
+      onlyAlertOnce: true,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await _plugin.show(
+      id: 999,
+      title: 'SmartScan: Scanner Active',
+      body: 'Camera open — app processing in background',
+      notificationDetails: platformDetails,
+    );
+  }
+
+  Future<void> cancelScannerNotification() async {
+    if (kIsWeb) return;
+    await _plugin.cancel(id: 999);
   }
 }

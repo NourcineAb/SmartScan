@@ -6,6 +6,7 @@ import '../bloc/settings_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/services/feedback_service.dart';
+import '../../../../core/services/gemini_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -31,6 +32,7 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 _buildThemeSection(context, state),
                 _buildLanguageSection(context, state),
+                _buildAISection(context),
                 _buildFeaturesSection(context, state),
                 const SizedBox(height: 32),
               ],
@@ -102,6 +104,67 @@ class SettingsScreen extends StatelessWidget {
                     );
               }
             },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAISection(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return _SettingsSection(
+      title: 'Generative AI',
+      icon: Icons.auto_awesome,
+      children: [
+        _SettingsCard(
+          title: 'Gemini API Key',
+          subtitle: 'Enable smart parsing & data extraction',
+          trailing: const Icon(Icons.chevron_right),
+          child: InkWell(
+            onTap: () async {
+              await FeedbackService().onTap();
+              final currentKey = await GeminiService().getApiKey();
+              if (!context.mounted) return;
+              
+              final controller = TextEditingController(text: currentKey);
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Gemini API Key'),
+                  content: TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your Google Gemini API Key',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await GeminiService().setApiKey(controller.text);
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Configure API Key',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ),
       ],

@@ -101,6 +101,7 @@ class DatabaseService {
         title TEXT NOT NULL,
         image_path TEXT,
         raw_text TEXT,
+        summary TEXT,
         translated_text TEXT,
         detected_language TEXT,
         target_language TEXT,
@@ -116,7 +117,8 @@ class DatabaseService {
         image_height INTEGER,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
-        is_synced INTEGER DEFAULT 0
+        is_synced INTEGER DEFAULT 0,
+        additional_images_json TEXT
       )
     ''');
 
@@ -199,6 +201,22 @@ class DatabaseService {
       await db.execute('''
         ALTER TABLE ${AppConstants.tableScans}
         ADD COLUMN image_height INTEGER
+      ''');
+    }
+
+    // Upgrade from version 3 to 4: Add additional images column
+    if (oldVersion < 4) {
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN additional_images_json TEXT
+      ''');
+    }
+
+    // Upgrade from version 4 to 5: Add summary column
+    if (oldVersion < 5) {
+      await db.execute('''
+        ALTER TABLE ${AppConstants.tableScans}
+        ADD COLUMN summary TEXT
       ''');
     }
   }
@@ -373,6 +391,20 @@ class DatabaseService {
     final db = await database;
     final result = await db.rawQuery(
       'SELECT COUNT(*) as count FROM ${AppConstants.tableScans}',
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> getScanCountByCategory(String categoryId) async {
+    if (_isWeb()) {
+      return _webStorage[AppConstants.tableScans]!
+          .where((scan) => scan['category_id'] == categoryId)
+          .length;
+    }
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM ${AppConstants.tableScans} WHERE category_id = ?',
+      [categoryId],
     );
     return Sqflite.firstIntValue(result) ?? 0;
   }

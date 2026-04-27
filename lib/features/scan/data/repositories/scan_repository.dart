@@ -25,6 +25,7 @@ class ScanRepository {
     required String title,
     required String? imagePath,
     required String? rawText,
+    String? summary,
     required String? categoryId,
     String? translatedText,
     String? detectedLanguage,
@@ -37,17 +38,31 @@ class ScanRepository {
     DateTime? suggestedReminderDate,
     int? imageWidth,
     int? imageHeight,
+    List<String>? additionalImages,
   }) async {
     try {
       final scanId = const Uuid().v4();
       String? savedImagePath;
 
-      // Save image to app documents directory
+      // Save images to app documents directory
       if (imagePath != null && imagePath.isNotEmpty) {
-        savedImagePath = await _fileService.saveImageForScan(
-          scanId: scanId,
-          sourceImagePath: imagePath,
-        );
+        if (additionalImages != null && additionalImages.isNotEmpty) {
+          // Multi-image save
+          final savedPaths = await _fileService.saveImagesForScan(
+            scanId: scanId,
+            sourceImagePaths: additionalImages,
+          );
+          savedImagePath = savedPaths.first;
+          // All images are stored in additionalImages including the primary one
+          // to maintain a consistent list.
+          additionalImages = savedPaths;
+        } else {
+          // Single image save
+          savedImagePath = await _fileService.saveImageForScan(
+            scanId: scanId,
+            sourceImagePath: imagePath,
+          );
+        }
       }
 
       // Create scan model with all fields
@@ -56,6 +71,7 @@ class ScanRepository {
         title: title,
         imagePath: savedImagePath,
         rawText: rawText,
+        summary: summary,
         translatedText: translatedText,
         detectedLanguage: detectedLanguage,
         targetLanguage: targetLanguage,
@@ -69,6 +85,7 @@ class ScanRepository {
         imageWidth: imageWidth,
         imageHeight: imageHeight,
         createdAt: DateTime.now(),
+        additionalImages: additionalImages,
       );
 
       // Save to database
@@ -153,6 +170,7 @@ class ScanRepository {
     required String scanId,
     String? title,
     String? rawText,
+    String? summary,
     String? translatedText,
     String? categoryId,
     String? targetLanguage,
@@ -169,6 +187,7 @@ class ScanRepository {
 
       if (title != null) updates['title'] = title;
       if (rawText != null) updates['raw_text'] = rawText;
+      if (summary != null) updates['summary'] = summary;
       if (translatedText != null) updates['translated_text'] = translatedText;
       if (categoryId != null) updates['category_id'] = categoryId;
       if (targetLanguage != null) updates['target_language'] = targetLanguage;

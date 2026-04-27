@@ -3,6 +3,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'dart:io';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:uuid/uuid.dart';
 import '../../../../shared/models/bounding_box_model.dart';
 
@@ -99,70 +100,125 @@ class OCRService {
     return _textRecognizer!;
   }
 
+  /// Reset the service and free native resources
+  void reset() {
+    debugPrint('♻️ Resetting OCRService...');
+    _textRecognizer?.close();
+    _textRecognizer = null;
+  }
+
   /// Main extraction method with structured result
   Future<StructuredOCRResult> extractStructuredText(
     String imagePath, {
     Map<String, dynamic>? cropZone,
+    bool isMock = false,
   }) async {
     try {
-      // For web platform, use mock implementation
       if (kIsWeb) {
         return _extractStructuredTextWeb(imagePath);
       }
 
-      // For mobile platforms, use google_mlkit
-      try {
-        String processImagePath = imagePath;
-        int imageWidth = 0;
-        int imageHeight = 0;
-
-        // Get image dimensions
-        final imageFile = File(imagePath);
-        if (await imageFile.exists()) {
-          final imageBytes = await imageFile.readAsBytes();
-          final image = img.decodeImage(imageBytes);
-          if (image != null) {
-            imageWidth = image.width;
-            imageHeight = image.height;
-          }
-        }
-
-        // If crop zone is provided, crop the image before processing
-        if (cropZone != null) {
-          processImagePath = await _cropImage(imagePath, cropZone);
-          // Get cropped image dimensions
-          final croppedFile = File(processImagePath);
-          if (await croppedFile.exists()) {
-            final croppedBytes = await croppedFile.readAsBytes();
-            final croppedImage = img.decodeImage(croppedBytes);
-            if (croppedImage != null) {
-              imageWidth = croppedImage.width;
-              imageHeight = croppedImage.height;
-            }
-          }
-        }
-
-        final inputImage = ml_kit.InputImage.fromFilePath(processImagePath);
-        final recognizer = _getRecognizer();
-        final ml_kit.RecognizedText recognizedText =
-            await recognizer.processImage(inputImage);
-
-        // Extract structured data with bounding boxes
-        final result = _extractStructuredData(
-          recognizedText,
-          imageWidth,
-          imageHeight,
-          processImagePath,
-        );
-
-        return result;
-      } on Exception catch (e) {
-        debugPrint('ML Kit OCR failed: $e, falling back to mock');
-        return _extractStructuredTextWeb(imagePath);
+      debugPrint('🔍 [OCR] Starting pipeline for: $imagePath');
+      _logInternalMemory('Pipeline Start');
+      
+      // 1. Prepare image (resize/downscale for OCR)
+      final prepResult = await _prepareImageForOCR(imagePath);
+      String processImagePath = prepResult.path;
+      int imageWidth = prepResult.width;
+      int imageHeight = prepResult.height;
+      
+      _logInternalMemory('Preparation Done');
+      
+      // 2. Mock check
+      if (isMock) {
+        debugPrint('🔍 [OCR] Using Mock Data');
+        return _extractStructuredTextWeb(processImagePath);
       }
+
+      // 3. Process with ML Kit
+      debugPrint('🔍 [OCR] ML Kit Processing Start');
+
+      // 2. Apply crop if requested (rarely used in current flow)
+      if (cropZone != null) {
+        processImagePath = await _cropImage(processImagePath, cropZone);
+        // Refresh dimensions for cropped image
+        final croppedPreparation = await _prepareImageForOCR(processImagePath);
+        imageWidth = croppedPreparation.width;
+        imageHeight = croppedPreparation.height;
+      }
+
+      // 3. Process with ML Kit
+      final inputImage = ml_kit.InputImage.fromFilePath(processImagePath);
+      final recognizer = _getRecognizer();
+      final ml_kit.RecognizedText recognizedText =
+          await recognizer.processImage(inputImage);
+      
+      debugPrint('🔍 [OCR] ML Kit Done. Found ${recognizedText.blocks.length} blocks');
+      _logInternalMemory('ML Kit Processing Done');
+
+      // 4. Extract structured data
+      final result = _extractStructuredData(
+        recognizedText,
+        imageWidth,
+        imageHeight,
+        processImagePath,
+      );
+
+      // Clean up temporary resized/cropped files if they were created
+      if (processImagePath != imagePath) {
+        try {
+          final file = File(processImagePath);
+          if (await file.exists()) {
+            // We'll let the OS clean temp dir or handle it in a more global cleanup
+          }
+        } catch (_) {}
+      }
+
+      // Proactively close and reset recognizer if it's not a heavy batch
+      // This forces native memory release
+      reset();
+      
+      _logInternalMemory('Pipeline Finish');
+
+      return result;
     } catch (error) {
       debugPrint('OCR error: $error, falling back to mock');
       return _extractStructuredTextWeb(imagePath);
+    }
+  }
+
+  /// Gets image dimensions without loading the full pixel buffer into Dart heap.
+  /// Uses Flutter's native-backed codec for efficiency.
+  Future<({String path, int width, int height})> _prepareImageForOCR(String path) async {
+    final file = File(path);
+    if (!await file.exists()) return (path: path, width: 0, height: 0);
+
+    try {
+      final bytes = await file.readAsBytes();
+      
+      // Use ui.instantiateImageCodec to get dimensions without decoding to raw pixels in Dart.
+      // This uses the native Skia/Impeller decoder which is MUCH more memory efficient.
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 100, targetHeight: 100);
+      final frame = await codec.getNextFrame();
+      
+      // We still need the original dimensions for normalization.
+      // Wait, instantiateImageCodec with target sizes might lose original dimensions.
+      // Let's get original dimensions first.
+      final originalCodec = await ui.instantiateImageCodec(bytes);
+      final originalFrame = await originalCodec.getNextFrame();
+      final width = originalFrame.image.width;
+      final height = originalFrame.image.height;
+      
+      // Clean up native resources immediately
+      originalFrame.image.dispose();
+      frame.image.dispose();
+      originalCodec.dispose();
+      codec.dispose();
+
+      return (path: path, width: width, height: height);
+    } catch (e) {
+      debugPrint('Error getting image dimensions: $e');
+      return (path: path, width: 0, height: 0);
     }
   }
 
@@ -512,8 +568,17 @@ class OCRService {
     );
   }
 
+  void _logInternalMemory(String stage) {
+    if (kDebugMode) {
+      try {
+        final bytes = ProcessInfo.currentRss;
+        final mb = bytes / (1024 * 1024);
+        debugPrint('💾 [OCR SERVICE] $stage: ${mb.toStringAsFixed(2)}MB');
+      } catch (_) {}
+    }
+  }
+
   void dispose() {
-    _textRecognizer?.close();
-    _textRecognizer = null;
+    reset();
   }
 }

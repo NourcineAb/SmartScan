@@ -99,8 +99,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   /// Calculate all dashboard statistics
   Future<DashboardStats> _calculateDashboardStats() async {
     try {
-      // Get all scans
-      final allScans = await scanRepository.getAllScans();
+      // Get ALL scans for statistics calculation (unlimited)
+      final allScans = await scanRepository.getAllScans(limit: 100000);
 
       // Get total categories
       final categories = await categoryRepository.getAllCategoriesAsync();

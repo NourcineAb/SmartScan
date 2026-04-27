@@ -326,9 +326,8 @@ class ScanBloc extends Bloc<ScanEvent, ScanState> {
 
   @override
   Future<void> close() {
-    _ocrService.dispose();
-    _entityService.dispose();
-    _languageService.dispose();
+    // We don't dispose of singleton services here as they are shared across the app.
+    // They will be cleaned up by the OS when the app is terminated.
     return super.close();
   }
 

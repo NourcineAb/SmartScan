@@ -9,6 +9,7 @@ import 'package:smart_scan/features/scan/presentation/pages/export_options_scree
 import 'package:smart_scan/features/history/presentation/pages/search_scans_screen.dart';
 import 'package:smart_scan/core/utils/page_transition_utils.dart';
 import 'package:smart_scan/core/services/feedback_service.dart';
+import 'package:smart_scan/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import '../bloc/scans_bloc.dart';
 
 class ScansScreen extends StatelessWidget {
@@ -71,6 +72,13 @@ class _ScansScreenContent extends StatelessWidget {
               duration: Duration(seconds: 2),
             ),
           );
+
+          // Refresh global dashboard bloc
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboardEvent());
+          } catch (_) {
+            debugPrint('Warning: Could not access DashboardBloc from ScansScreen');
+          }
         }
       } catch (e) {
         if (context.mounted) {

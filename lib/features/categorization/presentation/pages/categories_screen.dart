@@ -177,8 +177,8 @@ class _CategoriesViewState extends State<_CategoriesView> {
                 return _buildEmptyState();
               }
               return _isGridView
-                  ? _buildGridView(state.categories)
-                  : _buildListView(state.categories);
+                  ? _buildGridView(state.categories, state.documentCounts)
+                  : _buildListView(state.categories, state.documentCounts);
             } else if (state is CategoryError) {
               return Center(
                 child: Column(
@@ -237,7 +237,7 @@ class _CategoriesViewState extends State<_CategoriesView> {
     );
   }
 
-  Widget _buildGridView(List<CategoryModel> categories) {
+  Widget _buildGridView(List<CategoryModel> categories, Map<String, int> counts) {
     return GridView.builder(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -253,21 +253,20 @@ class _CategoriesViewState extends State<_CategoriesView> {
       ),
       itemCount: categories.length,
       itemBuilder: (context, index) {
+        final category = categories[index];
         return CategoryCard(
-          category: categories[index],
-          documentCount: _repository.getDocumentCountForCategory(
-            categories[index].id,
-          ),
-          onTap: () => _openCategoryDocuments(categories[index]),
-          onEdit: () => _editCategory(categories[index]),
+          category: category,
+          documentCount: counts[category.id] ?? 0,
+          onTap: () => _openCategoryDocuments(category),
+          onEdit: () => _editCategory(category),
           onDelete: () =>
-              _deleteCategory(categories[index].id, categories[index].name),
+              _deleteCategory(category.id, category.name),
         );
       },
     );
   }
 
-  Widget _buildListView(List<CategoryModel> categories) {
+  Widget _buildListView(List<CategoryModel> categories, Map<String, int> counts) {
     return ListView.builder(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -278,9 +277,7 @@ class _CategoriesViewState extends State<_CategoriesView> {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final category = categories[index];
-        final documentCount = _repository.getDocumentCountForCategory(
-          category.id,
-        );
+        final documentCount = counts[category.id] ?? 0;
 
         return Card(
           elevation: 2,

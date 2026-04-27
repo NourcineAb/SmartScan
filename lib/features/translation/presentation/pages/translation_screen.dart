@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
+import 'package:google_mlkit_language_id/google_mlkit_language_id.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:smart_scan/features/scan/data/services/ocr_service.dart';
 import 'package:smart_scan/features/scan/data/repositories/scan_repository.dart';
 import 'package:smart_scan/core/services/feedback_service.dart';
@@ -37,6 +39,16 @@ class _TranslationScreenState extends State<TranslationScreen> {
   String? _statusMessage;
   bool _statusIsError = false;
 
+  // Voice Input
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+
+  // Language Detection
+  final LanguageIdentifier _languageIdentifier =
+      LanguageIdentifier(confidenceThreshold: 0.5);
+  String? _autoDetectedLanguage;
+  bool _isAutoDetecting = false;
+
   // Cache translators for different language pairs to avoid recreating
   final Map<String, OnDeviceTranslator> _translatorCache = {};
   bool _isPreloadingTranslator = false;
@@ -55,6 +67,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
   };
 
   final Map<String, String> _languageNames = {
+    'auto': 'Auto Detect',
     'en': 'English',
     'fr': 'Français',
     'ar': 'العربية',
@@ -106,7 +119,109 @@ class _TranslationScreenState extends State<TranslationScreen> {
     _sourceController.dispose();
     _targetController.dispose();
     _translator?.close();
+    _languageIdentifier.close();
     super.dispose();
+  }
+
+  // ─── Voice Input ──────────────────────────────────────────────────────────
+
+  Future<void> _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize(
+        onStatus: (val) {
+          if (val == 'done' || val == 'notListening') {
+            if (mounted) setState(() => _isListening = false);
+          }
+        },
+        onError: (val) {
+          if (mounted) {
+            setState(() => _isListening = false);
+            _showError('Speech recognition error: ${val.errorMsg}');
+          }
+        },
+      );
+
+      if (available) {
+        final existingText = _sourceController.text;
+        final prefix = existingText.isEmpty
+            ? ''
+            : (existingText.endsWith(' ') ? existingText : '$existingText ');
+
+        setState(() => _isListening = true);
+        await FeedbackService().onTap();
+
+        // Map internal language code to SpeechToText localeId
+        String localeId = 'en-US';
+        if (_selectedSourceLanguage != 'auto') {
+          final Map<String, String> localeMap = {
+            'en': 'en-US',
+            'fr': 'fr-FR',
+            'ar': 'ar-SA',
+            'es': 'es-ES',
+            'de': 'de-DE',
+            'it': 'it-IT',
+            'pt': 'pt-PT',
+            'ja': 'ja-JP',
+            'zh': 'zh-CN',
+          };
+          localeId = localeMap[_selectedSourceLanguage] ?? 'en-US';
+        } else {
+          // In auto mode, try to use device locale or default to English
+          try {
+            final locales = await _speech.locales();
+            if (locales.isNotEmpty) {
+              // Try to find a matching locale or just use system default
+              localeId = locales.first.localeId;
+            }
+          } catch (_) {}
+        }
+
+        _speech.listen(
+          localeId: localeId,
+          onResult: (val) {
+            setState(() {
+              _sourceController.text = prefix + val.recognizedWords;
+              if (val.finalResult && _selectedSourceLanguage == 'auto') {
+                _detectLanguage(val.recognizedWords);
+              }
+            });
+          },
+        );
+      } else {
+        _showError('Speech recognition not available');
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
+  // ─── Language Detection ────────────────────────────────────────────────────
+
+  Future<void> _detectLanguage(String text) async {
+    if (text.isEmpty) return;
+
+    setState(() => _isAutoDetecting = true);
+    try {
+      final List<IdentifiedLanguage> languages =
+          await _languageIdentifier.identifyPossibleLanguages(text);
+
+      if (languages.isNotEmpty) {
+        final String bestLang = languages.first.languageTag;
+        if (_languageCodes.containsKey(bestLang)) {
+          setState(() {
+            _autoDetectedLanguage = bestLang;
+            _statusMessage = 'Detected: ${_languageNames[bestLang]}';
+          });
+          // Update translator if target is already selected
+          _preloadTranslator();
+        }
+      }
+    } catch (e) {
+      debugPrint('Language detection error: $e');
+    } finally {
+      setState(() => _isAutoDetecting = false);
+    }
   }
 
   // ─── Image Picking ─────────────────────────────────────────────────────────
@@ -261,7 +376,10 @@ class _TranslationScreenState extends State<TranslationScreen> {
 
     setState(() => _isPreloadingTranslator = true);
     try {
-      final sourceLang = _languageCodes[_selectedSourceLanguage];
+      final sourceLangCode = _selectedSourceLanguage == 'auto'
+          ? (_autoDetectedLanguage ?? 'en')
+          : _selectedSourceLanguage;
+      final sourceLang = _languageCodes[sourceLangCode];
       final targetLang = _languageCodes[_selectedTargetLanguage];
 
       if (sourceLang == null || targetLang == null) return;
@@ -328,7 +446,9 @@ class _TranslationScreenState extends State<TranslationScreen> {
         _setStatus('⏳ Offline mode: translating…');
         result = await _translateOffline(
           text,
-          _selectedSourceLanguage,
+          _selectedSourceLanguage == 'auto'
+              ? (_autoDetectedLanguage ?? 'en')
+              : _selectedSourceLanguage,
           _selectedTargetLanguage,
         );
         _setStatus('✓ Offline translation complete');
@@ -340,7 +460,9 @@ class _TranslationScreenState extends State<TranslationScreen> {
           debugPrint('📡 Internet available - trying online translation');
           result = await _translateViaApi(
             text,
-            _selectedSourceLanguage,
+            _selectedSourceLanguage == 'auto'
+                ? (_autoDetectedLanguage ?? 'en')
+                : _selectedSourceLanguage,
             _selectedTargetLanguage,
           ).timeout(const Duration(seconds: 5));
           _setStatus('✓ Translation complete');
@@ -353,7 +475,9 @@ class _TranslationScreenState extends State<TranslationScreen> {
             _setStatus('⏳ Using offline translation…');
             result = await _translateOffline(
               text,
-              _selectedSourceLanguage,
+              _selectedSourceLanguage == 'auto'
+                  ? (_autoDetectedLanguage ?? 'en')
+                  : _selectedSourceLanguage,
               _selectedTargetLanguage,
             );
             _setStatus('✓ Offline translation done');
@@ -530,7 +654,9 @@ class _TranslationScreenState extends State<TranslationScreen> {
 
     try {
       await ScanRepository().saveTranslation(
-        sourceLanguage: _selectedSourceLanguage,
+        sourceLanguage: _selectedSourceLanguage == 'auto'
+            ? (_autoDetectedLanguage ?? 'en')
+            : _selectedSourceLanguage,
         targetLanguage: _selectedTargetLanguage,
         originalText: _sourceController.text,
         translatedText: _targetController.text,
@@ -635,7 +761,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(l10n?.translation_settings ?? 'Translation'),
         elevation: 0,
@@ -666,8 +791,146 @@ class _TranslationScreenState extends State<TranslationScreen> {
                 ),
         ],
       ),
-      body: Column(
-        children: [
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Status message (translating / error / done)
+              if (_statusMessage != null)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _statusIsError
+                        ? Colors.red.withValues(alpha: 0.1)
+                        : Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _statusIsError
+                          ? Colors.red.withValues(alpha: 0.3)
+                          : Colors.green.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _statusIsError
+                            ? Icons.error_outline
+                            : (_isTranslating
+                                ? Icons.sync
+                                : Icons.check_circle_outline),
+                        size: 16,
+                        color: _statusIsError
+                            ? Colors.red[700]
+                            : Colors.green[700],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _statusMessage!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: _statusIsError
+                                ? Colors.red[700]
+                                : Colors.green[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: SmartElevatedButton(
+                        onPressed: _isTranslating ? null : _translate,
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: _isTranslating
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.translate),
+                        isLoading: _isTranslating,
+                        child: Text(
+                          _isTranslating
+                              ? (AppLocalizations.of(context)?.processing ??
+                                  'Translating…')
+                              : (AppLocalizations.of(context)
+                                      ?.action_translation ??
+                                  'Translate'),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_targetController.text.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: SmartElevatedButton(
+                          onPressed: _isSavingTranslation
+                              ? null
+                              : _saveTranslation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: _isSavingTranslation
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.save),
+                          isLoading: _isSavingTranslation,
+                          child: Text(
+                            _isSavingTranslation
+                                ? (AppLocalizations.of(context)?.processing ??
+                                    'Saving…')
+                                : _getSaveButtonLabel(context),
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
           // ── Picked image preview (optional) ─────────────────────────
           if (_pickedImagePath != null)
             SmartGestureDetector(
@@ -779,7 +1042,12 @@ class _TranslationScreenState extends State<TranslationScreen> {
                     value: _selectedSourceLanguage,
                     languages: _languageNames,
                     onChanged: (v) {
-                      setState(() => _selectedSourceLanguage = v);
+                      setState(() {
+                        _selectedSourceLanguage = v;
+                        if (v == 'auto') {
+                          _detectLanguage(_sourceController.text);
+                        }
+                      });
                       _preloadTranslator();
                     },
                   ),
@@ -805,12 +1073,12 @@ class _TranslationScreenState extends State<TranslationScreen> {
           ),
 
           // ── Source text + Target text (side by side on wide screens) ─
-          // ── Source text + Target text ─
-          Expanded(
-            child: LayoutBuilder(builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 600;
-              if (isWide) {
-                return Row(
+          LayoutBuilder(builder: (context, constraints) {
+            final isWide = constraints.maxWidth > 600;
+            if (isWide) {
+              return SizedBox(
+                height: 400,
+                child: Row(
                   children: [
                     Expanded(
                         child: _textPanel(
@@ -818,7 +1086,19 @@ class _TranslationScreenState extends State<TranslationScreen> {
                             controller: _sourceController,
                             readOnly: false,
                             onCopy: () =>
-                                _copyToClipboard(_sourceController.text))),
+                                _copyToClipboard(_sourceController.text),
+                            onVoice: _listen,
+                            onClear: () => setState(() {
+                              _sourceController.clear();
+                              _targetController.clear();
+                              _statusMessage = null;
+                            }),
+                            isListening: _isListening,
+                            onChanged: (text) {
+                              if (_selectedSourceLanguage == 'auto') {
+                                _detectLanguage(text);
+                              }
+                            })),
                     Container(width: 1, color: Theme.of(context).dividerColor),
                     Expanded(
                         child: _textPanel(
@@ -826,181 +1106,63 @@ class _TranslationScreenState extends State<TranslationScreen> {
                             controller: _targetController,
                             readOnly: true,
                             onCopy: () =>
-                                _copyToClipboard(_targetController.text))),
+                                _copyToClipboard(_targetController.text),
+                            onClear: () =>
+                                setState(() => _targetController.clear()))),
                   ],
-                );
-              }
-              return Column(
-                children: [
-                  Expanded(
-                      child: _textPanel(
-                          label: 'Original Text',
-                          controller: _sourceController,
-                          readOnly: false,
-                          onCopy: () =>
-                              _copyToClipboard(_sourceController.text))),
-                  Container(height: 1, color: Theme.of(context).dividerColor),
-                  Expanded(
-                      child: _textPanel(
-                          label: 'Translated Text',
-                          controller: _targetController,
-                          readOnly: true,
-                          onCopy: () =>
-                              _copyToClipboard(_targetController.text))),
-                ],
+                ),
               );
-            }),
-          ),
-
-// ── Action buttons ───────────────────────────────────────────
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Status message (translating / error / done)
-                  if (_statusMessage != null)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _statusIsError
-                            ? Colors.red.withValues(alpha: 0.1)
-                            : Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _statusIsError
-                              ? Colors.red.withValues(alpha: 0.3)
-                              : Colors.green.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _statusIsError
-                                ? Icons.error_outline
-                                : (_isTranslating
-                                    ? Icons.sync
-                                    : Icons.check_circle_outline),
-                            size: 16,
-                            color: _statusIsError
-                                ? Colors.red[700]
-                                : Colors.green[700],
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _statusMessage!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: _statusIsError
-                                    ? Colors.red[700]
-                                    : Colors.green[700],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 48,
-                          child: SmartElevatedButton(
-                            onPressed: _isTranslating ? null : _translate,
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
-                            ),
-                            icon: _isTranslating
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Icon(Icons.translate),
-                            isLoading: _isTranslating,
-                            child: Text(
-                              _isTranslating
-                                  ? (AppLocalizations.of(context)?.processing ??
-                                      'Translating…')
-                                  : (AppLocalizations.of(context)
-                                          ?.action_translation ??
-                                      'Translate'),
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_targetController.text.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: SizedBox(
-                            height: 48,
-                            child: SmartElevatedButton(
-                              onPressed: _isSavingTranslation
-                                  ? null
-                                  : _saveTranslation,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
-                              icon: _isSavingTranslation
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Icon(Icons.save),
-                              isLoading: _isSavingTranslation,
-                              child: Text(
-                                _isSavingTranslation
-                                    ? (AppLocalizations.of(context)
-                                            ?.processing ??
-                                        'Saving…')
-                                    : _getSaveButtonLabel(context),
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          )
+            }
+            return Column(
+              children: [
+                SizedBox(
+                  height: 250,
+                  child: _textPanel(
+                      label: 'Original Text',
+                      controller: _sourceController,
+                      readOnly: false,
+                      onCopy: () => _copyToClipboard(_sourceController.text),
+                      onVoice: _listen,
+                      onClear: () => setState(() {
+                        _sourceController.clear();
+                        _targetController.clear();
+                        _statusMessage = null;
+                      }),
+                      isListening: _isListening,
+                      onChanged: (text) {
+                        if (_selectedSourceLanguage == 'auto') {
+                          _detectLanguage(text);
+                        }
+                      }),
+                ),
+                Container(height: 1, color: Theme.of(context).dividerColor),
+                SizedBox(
+                  height: 250,
+                  child: _textPanel(
+                      label: 'Translated Text',
+                      controller: _targetController,
+                      readOnly: true,
+                      onCopy: () => _copyToClipboard(_targetController.text),
+                      onClear: () => setState(() => _targetController.clear())),
+                ),
+              ],
+            );
+          }),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _textPanel({
     required String label,
     required TextEditingController controller,
     required bool readOnly,
     required VoidCallback onCopy,
+    VoidCallback? onVoice,
+    VoidCallback? onClear,
+    bool isListening = false,
+    ValueChanged<String>? onChanged,
   }) {
     return Padding(
       padding: const EdgeInsets.all(12),
@@ -1014,12 +1176,38 @@ class _TranslationScreenState extends State<TranslationScreen> {
               Text(label,
                   style: const TextStyle(
                       fontWeight: FontWeight.w600, fontSize: 13)),
-              SmartIconButton(
-                  icon: const Icon(Icons.copy, size: 18),
-                  onPressed: controller.text.isEmpty ? null : onCopy,
-                  tooltip: 'Copy',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints()),
+              Row(
+                children: [
+                  if (onVoice != null)
+                    SmartIconButton(
+                      icon: Icon(
+                        isListening ? Icons.mic : Icons.mic_none,
+                        size: 18,
+                        color: isListening ? Colors.red : null,
+                      ),
+                      onPressed: onVoice,
+                      tooltip: 'Voice Input',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  if (onVoice != null) const SizedBox(width: 8),
+                  if (onClear != null)
+                    SmartIconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      onPressed: controller.text.isEmpty ? null : onClear,
+                      tooltip: 'Clear',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  if (onClear != null) const SizedBox(width: 8),
+                  SmartIconButton(
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: controller.text.isEmpty ? null : onCopy,
+                      tooltip: 'Copy',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints()),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -1031,6 +1219,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
                 expands: true,
                 readOnly: readOnly,
                 textAlignVertical: TextAlignVertical.top,
+                onChanged: onChanged,
                 decoration: InputDecoration(
                   hintText: readOnly
                       ? 'Translation will appear here...'

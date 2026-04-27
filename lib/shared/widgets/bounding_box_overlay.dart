@@ -234,19 +234,20 @@ class BoundingBoxOverlay extends StatelessWidget {
   IconData _getEntityIcon(String type) {
     switch (type.toLowerCase()) {
       case 'email':
-        return Icons.email;
+        return Icons.alternate_email;
       case 'phone':
-        return Icons.phone;
+        return Icons.call;
       case 'url':
-        return Icons.link;
+        return Icons.language;
       case 'date':
-        return Icons.calendar_today;
+        return Icons.event;
       case 'location':
-        return Icons.location_on;
+      case 'address':
+        return Icons.place;
       case 'price':
-        return Icons.attach_money;
+        return Icons.payments_outlined;
       default:
-        return Icons.label;
+        return Icons.label_important_outline;
     }
   }
 }

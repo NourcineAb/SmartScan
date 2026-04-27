@@ -2,6 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 /// Singleton service for sound and haptic feedback.
 /// Reads enable/disable flags from SharedPreferences on every call so it always
@@ -12,13 +13,21 @@ class FeedbackService {
   FeedbackService._internal();
 
   // One AudioPlayer per sound so overlapping sounds don't cut each other off
-  final AudioPlayer _tapPlayer = AudioPlayer();
-  final AudioPlayer _shutterPlayer = AudioPlayer();
-  final AudioPlayer _successPlayer = AudioPlayer();
-  final AudioPlayer _errorPlayer = AudioPlayer();
-  final AudioPlayer _savePlayer = AudioPlayer();
-  final AudioPlayer _deletePlayer = AudioPlayer();
-  final AudioPlayer _vibrationPlayer = AudioPlayer();
+  AudioPlayer? _tapPlayer;
+  AudioPlayer? _shutterPlayer;
+  AudioPlayer? _successPlayer;
+  AudioPlayer? _errorPlayer;
+  AudioPlayer? _savePlayer;
+  AudioPlayer? _deletePlayer;
+  AudioPlayer? _vibrationPlayer;
+
+  AudioPlayer _getTapPlayer() => _tapPlayer ??= AudioPlayer();
+  AudioPlayer _getShutterPlayer() => _shutterPlayer ??= AudioPlayer();
+  AudioPlayer _getSuccessPlayer() => _successPlayer ??= AudioPlayer();
+  AudioPlayer _getErrorPlayer() => _errorPlayer ??= AudioPlayer();
+  AudioPlayer _getSavePlayer() => _savePlayer ??= AudioPlayer();
+  AudioPlayer _getDeletePlayer() => _deletePlayer ??= AudioPlayer();
+  AudioPlayer _getVibrationPlayer() => _vibrationPlayer ??= AudioPlayer();
 
   // ─── Settings helpers ──────────────────────────────────────────────────────
 
@@ -65,37 +74,37 @@ class FeedbackService {
 
   /// Camera shutter — when a photo is taken.
   Future<void> onShutter() async {
-    if (await _soundEnabled) _play(_shutterPlayer, 'sounds/shutter.mp3');
+    if (await _soundEnabled) _play(_getShutterPlayer(), 'sounds/shutter.mp3');
     if (await _vibrationEnabled) await _haptic(HapticsType.medium);
   }
 
   /// Success — scan saved, translation done, etc.
   Future<void> onSuccess() async {
-    if (await _soundEnabled) _play(_successPlayer, 'sounds/success.mp3');
+    if (await _soundEnabled) _play(_getSuccessPlayer(), 'sounds/success.mp3');
     if (await _vibrationEnabled) await _haptic(HapticsType.success);
   }
 
   /// Save — file saved or exported.
   Future<void> onSave() async {
-    if (await _soundEnabled) _play(_savePlayer, 'sounds/save.mp3');
+    if (await _soundEnabled) _play(_getSavePlayer(), 'sounds/save.mp3');
     if (await _vibrationEnabled) await _haptic(HapticsType.heavy);
   }
 
   /// Error — something went wrong.
   Future<void> onError() async {
-    if (await _soundEnabled) _play(_errorPlayer, 'sounds/error.mp3');
+    if (await _soundEnabled) _play(_getErrorPlayer(), 'sounds/error.mp3');
     if (await _vibrationEnabled) await _haptic(HapticsType.error);
   }
 
   /// Delete — category or item deleted.
   Future<void> onDelete() async {
-    if (await _soundEnabled) _play(_deletePlayer, 'sounds/delete.mp3');
+    if (await _soundEnabled) _play(_getDeletePlayer(), 'sounds/delete.mp3');
     if (await _vibrationEnabled) await _haptic(HapticsType.warning);
   }
 
   /// Vibration toggle — when vibration setting is changed.
   Future<void> onVibration() async {
-    if (await _soundEnabled) _play(_vibrationPlayer, 'sounds/vibration.mp3');
+    if (await _soundEnabled) _play(_getVibrationPlayer(), 'sounds/vibration.mp3');
     if (await _vibrationEnabled) await _haptic(HapticsType.selection);
   }
 
@@ -104,20 +113,33 @@ class FeedbackService {
   Future<void> onVibrationToggled(bool isEnabled) async {
     if (!isEnabled) {
       // Disabling vibration - play sound only
-      if (await _soundEnabled) _play(_vibrationPlayer, 'sounds/vibration.mp3');
+      if (await _soundEnabled) _play(_getVibrationPlayer(), 'sounds/vibration.mp3');
     } else {
       // Activating vibration - just vibrate, no sound
       if (await _vibrationEnabled) await _haptic(HapticsType.selection);
     }
   }
 
+  void reset() {
+    debugPrint('♻️ Resetting FeedbackService...');
+    _tapPlayer?.dispose();
+    _shutterPlayer?.dispose();
+    _successPlayer?.dispose();
+    _errorPlayer?.dispose();
+    _savePlayer?.dispose();
+    _deletePlayer?.dispose();
+    _vibrationPlayer?.dispose();
+    
+    _tapPlayer = null;
+    _shutterPlayer = null;
+    _successPlayer = null;
+    _errorPlayer = null;
+    _savePlayer = null;
+    _deletePlayer = null;
+    _vibrationPlayer = null;
+  }
+
   void dispose() {
-    _tapPlayer.dispose();
-    _shutterPlayer.dispose();
-    _successPlayer.dispose();
-    _errorPlayer.dispose();
-    _savePlayer.dispose();
-    _deletePlayer.dispose();
-    _vibrationPlayer.dispose();
+    reset();
   }
 }

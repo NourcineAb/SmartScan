@@ -23,7 +23,8 @@ class FullscreenImageViewer extends StatefulWidget {
   });
 
   @override
-  State<FullscreenImageViewer> createState() => _FullscreenImageViewerState();
+  State<FullscreenImageViewer> createState() =>
+      _FullscreenImageViewerState();
 
   /// Show the fullscreen viewer as a modal
   static Future<void> show(
@@ -56,25 +57,57 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
   bool _showUI = true;
   final Set<String> _highlightedBoxIds = {};
 
+  double _currentScale = 1.0;
+  ImageProvider? _lowResProvider;
+  ImageProvider? _highResProvider;
+
   @override
   void initState() {
     super.initState();
     _transformationController = TransformationController();
+    _transformationController.addListener(_handleZoomChange);
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
     _fadeController.value = 1.0;
-    
-    // Set immersive mode
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+  }
+
+  void _handleZoomChange() {
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    if ((scale > 1.5 && _currentScale <= 1.5) ||
+        (scale <= 1.5 && _currentScale > 1.5)) {
+      setState(() {
+        _currentScale = scale;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _transformationController.removeListener(_handleZoomChange);
     _transformationController.dispose();
     _fadeController.dispose();
+
+    // Evict providers synchronously so the large GPU textures are released
+    // before Flutter renders the next frame. Deferring this via
+    // addPostFrameCallback would leave the textures alive during the
+    // route-pop transition, wasting precious RAM on budget devices.
+    _lowResProvider?.evict();
+    _highResProvider?.evict();
+    _lowResProvider = null;
+    _highResProvider = null;
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
+    // Hard-clear the image cache synchronously. This screen may have decoded
+    // a very large image (up to 2500 px wide at 5× zoom) and we want that
+    // memory back immediately, not after the next build pass.
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+
     super.dispose();
   }
 
@@ -98,7 +131,7 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark ? Colors.black : Colors.white,
       body: GestureDetector(
@@ -108,13 +141,13 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
           children: [
             // Main image with zoom/pan
             _buildImageViewer(),
-            
+
             // Bounding box overlay
-            if (_showOverlay && 
-                widget.boundingBoxes != null && 
+            if (_showOverlay &&
+                widget.boundingBoxes != null &&
                 widget.imageSize != null)
               _buildOverlay(),
-            
+
             // UI overlay
             FadeTransition(
               opacity: _fadeController,
@@ -139,17 +172,48 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
 
   Widget _buildImage() {
     final imageFile = File(widget.imagePath);
-    
+    final bool isZoomed = _currentScale > 1.5;
+
     if (imageFile.existsSync()) {
-      return Image.file(
-        imageFile,
+      // Low-res provider (1000 px wide) is always prepared.
+      _lowResProvider ??=
+          ResizeImage(FileImage(imageFile), width: 1000);
+
+      // High-res provider (2500 px wide) is only prepared on demand when
+      // the user has actually zoomed in, to avoid decoding a large bitmap
+      // before it is needed.
+      if (isZoomed) {
+        _highResProvider ??=
+            ResizeImage(FileImage(imageFile), width: 2500);
+      }
+
+      final activeProvider =
+          isZoomed ? _highResProvider! : _lowResProvider!;
+
+      return Image(
+        image: activeProvider,
         fit: BoxFit.contain,
+        // Changing the key when zoom threshold crosses forces Flutter to
+        // rebuild the Image widget with the new provider, which triggers
+        // the higher-res decode at the right moment.
+        key: ValueKey('${widget.imagePath}_$isZoomed'),
       );
     } else {
-      // Try as asset
-      return Image.asset(
-        widget.imagePath,
+      // Fallback to asset
+      _lowResProvider ??=
+          ResizeImage(AssetImage(widget.imagePath), width: 1000);
+      if (isZoomed) {
+        _highResProvider ??=
+            ResizeImage(AssetImage(widget.imagePath), width: 2500);
+      }
+
+      final activeProvider =
+          isZoomed ? _highResProvider! : _lowResProvider!;
+
+      return Image(
+        image: activeProvider,
         fit: BoxFit.contain,
+        key: ValueKey('${widget.imagePath}_$isZoomed'),
         errorBuilder: (context, error, stackTrace) {
           return const Center(
             child: Icon(
@@ -170,7 +234,8 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
           boundingBoxes: widget.boundingBoxes!,
           entities: widget.entities,
           imageSize: widget.imageSize!,
-          displaySize: Size(constraints.maxWidth, constraints.maxHeight),
+          displaySize:
+              Size(constraints.maxWidth, constraints.maxHeight),
           highlightedBoxIds: _highlightedBoxIds,
           showAllBoxes: true,
           onBoxTap: (box) => _handleBoxTap(box),
@@ -196,11 +261,13 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
                 ],
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 8, vertical: 8),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
+                  icon:
+                      const Icon(Icons.close, color: Colors.white),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 if (widget.title != null)
@@ -218,8 +285,8 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
                 if (widget.boundingBoxes != null)
                   IconButton(
                     icon: Icon(
-                      _showOverlay 
-                          ? Icons.visibility 
+                      _showOverlay
+                          ? Icons.visibility
                           : Icons.visibility_off,
                       color: Colors.white,
                     ),
@@ -229,9 +296,9 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
               ],
             ),
           ),
-          
+
           const Spacer(),
-          
+
           // Bottom controls
           Container(
             decoration: BoxDecoration(
@@ -254,13 +321,15 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
                     _buildControlButton(
                       icon: Icons.select_all,
                       label: 'Clear',
-                      onTap: () => setState(() => _highlightedBoxIds.clear()),
+                      onTap: () => setState(
+                          () => _highlightedBoxIds.clear()),
                     ),
                   const SizedBox(width: 24),
                   _buildControlButton(
                     icon: Icons.zoom_out_map,
                     label: 'Reset',
-                    onTap: () => _transformationController.value = Matrix4.identity(),
+                    onTap: () => _transformationController.value =
+                        Matrix4.identity(),
                   ),
                   const SizedBox(width: 24),
                   _buildControlButton(
@@ -324,10 +393,10 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
 
   void _handleEntityTap(EntityModel entity) {
     if (widget.boundingBoxes == null) return;
-    
+
     final matchingBoxes = widget.boundingBoxes!.where((box) =>
         box.text.toLowerCase().contains(entity.text.toLowerCase()));
-    
+
     setState(() {
       for (final box in matchingBoxes) {
         if (_highlightedBoxIds.contains(box.id)) {
@@ -340,7 +409,6 @@ class _FullscreenImageViewerState extends State<FullscreenImageViewer>
   }
 
   void _shareImage() {
-    // Share functionality would be implemented here
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Share functionality coming soon')),
     );

@@ -95,4 +95,8 @@ class CategoryRepository {
   int getDocumentCountForCategory(String categoryId) {
     return _categoryDocuments.values.where((c) => c == categoryId).length;
   }
+
+  Future<int> getScanCountByCategoryAsync(String categoryId) async {
+    return await _db.getScanCountByCategory(categoryId);
+  }
 }

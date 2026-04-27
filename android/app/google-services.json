@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "780230137565",
+    "project_id": "smartscan-9dcac",
+    "storage_bucket": "smartscan-9dcac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:780230137565:android:69621f1b0db3c2a828ed34",
+        "android_client_info": {
+          "package_name": "smart.scan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKx9AZopeJM8GO3m7quBuNbYxlY10oXu4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

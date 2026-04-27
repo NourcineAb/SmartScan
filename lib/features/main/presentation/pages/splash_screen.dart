@@ -31,12 +31,12 @@ class _SplashScreenState extends State<SplashScreen>
     // Initialize controllers
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1800),
     );
     
     _textController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
     );
     
     _pulseController = AnimationController(
@@ -50,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _startAnimationSequence() async {
     // Start logo animation
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 500));
     await _logoController.forward();
 
     // Start text animation
@@ -60,7 +60,7 @@ class _SplashScreenState extends State<SplashScreen>
     _pulseController.repeat(reverse: true);
 
     // Wait for animations to complete then navigate
-    await Future.delayed(const Duration(milliseconds: 1500));
+    await Future.delayed(const Duration(milliseconds: 1200));
 
     if (mounted) {
       await _navigateBasedOnFirstLaunch();
@@ -216,13 +216,13 @@ class _SplashScreenState extends State<SplashScreen>
           .scale(
             begin: const Offset(0.5, 0.5),
             end: const Offset(1, 1),
-            duration: 600.ms,
+            duration: 1000.ms,
             curve: Curves.easeOutBack,
           )
           .rotate(
             begin: -0.2,
             end: 0,
-            duration: 600.ms,
+            duration: 1000.ms,
             curve: Curves.easeOutBack,
           );
       },
@@ -297,17 +297,17 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         )
           .animate(controller: _textController)
-          .fadeIn(duration: 400.ms)
+          .fadeIn(duration: 800.ms)
           .slideY(
             begin: 0.5,
             end: 0,
-            duration: 500.ms,
+            duration: 800.ms,
             curve: Curves.easeOut,
           )
           .scale(
             begin: const Offset(0.8, 0.8),
             end: const Offset(1, 1),
-            duration: 500.ms,
+            duration: 800.ms,
           );
       },
     );
@@ -326,12 +326,12 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         )
           .animate(controller: _textController)
-          .fadeIn(delay: 200.ms, duration: 400.ms)
+          .fadeIn(delay: 300.ms, duration: 600.ms)
           .slideY(
             begin: 0.3,
             end: 0,
-            delay: 200.ms,
-            duration: 400.ms,
+            delay: 300.ms,
+            duration: 600.ms,
           );
       },
     );

@@ -1425,6 +1425,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'© 2026 SmartScan. All rights reserved.'**
   String get about_copyright;
+
+  /// No description provided for @scan_mode_selection_title.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Scan Mode'**
+  String get scan_mode_selection_title;
+
+  /// No description provided for @scan_mode_single.
+  ///
+  /// In en, this message translates to:
+  /// **'Single Page'**
+  String get scan_mode_single;
+
+  /// No description provided for @scan_mode_batch.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch Mode'**
+  String get scan_mode_batch;
+
+  /// No description provided for @scan_mode_single_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan one page and process it immediately'**
+  String get scan_mode_single_desc;
+
+  /// No description provided for @scan_mode_batch_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan multiple pages and process them all at once'**
+  String get scan_mode_batch_desc;
+
+  /// No description provided for @start_scan_button.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Scanning'**
+  String get start_scan_button;
+
+  /// No description provided for @upload_single.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload from Gallery'**
+  String get upload_single;
+
+  /// No description provided for @upload_batch.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload multiple images'**
+  String get upload_batch;
 }
 
 class _AppLocalizationsDelegate

@@ -304,8 +304,8 @@ class _AddEditCategoryDialogState extends State<AddEditCategoryDialog> {
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: isSelected
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Theme.of(context).colorScheme.onSurface
+                                            : Theme.of(context).colorScheme.surface,
                                         width: isSelected ? 3 : 2,
                                       ),
                                       boxShadow: [

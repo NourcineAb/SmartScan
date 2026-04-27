@@ -693,4 +693,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get about_copyright => '© 2026 SmartScan. All rights reserved.';
+
+  @override
+  String get scan_mode_selection_title => 'Choose Scan Mode';
+
+  @override
+  String get scan_mode_single => 'Single Page';
+
+  @override
+  String get scan_mode_batch => 'Batch Mode';
+
+  @override
+  String get scan_mode_single_desc =>
+      'Scan one page and process it immediately';
+
+  @override
+  String get scan_mode_batch_desc =>
+      'Scan multiple pages and process them all at once';
+
+  @override
+  String get start_scan_button => 'Start Scanning';
+
+  @override
+  String get upload_single => 'Upload from Gallery';
+
+  @override
+  String get upload_batch => 'Upload multiple images';
 }

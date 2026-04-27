@@ -20,15 +20,18 @@ class ScanModel {
   final bool reminderDismissed;
   final int? imageWidth;
   final int? imageHeight;
+  final String? summary;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final bool isSynced;
+  final List<String>? additionalImages;
 
   ScanModel({
     required this.id,
     required this.title,
     this.imagePath,
     this.rawText,
+    this.summary,
     this.translatedText,
     this.detectedLanguage,
     this.targetLanguage,
@@ -45,6 +48,7 @@ class ScanModel {
     required this.createdAt,
     this.updatedAt,
     this.isSynced = false,
+    this.additionalImages,
   });
 
   Map<String, dynamic> toMap({bool forDatabase = false}) {
@@ -53,6 +57,7 @@ class ScanModel {
       'title': title,
       'image_path': imagePath,
       'raw_text': rawText,
+      'summary': summary,
       'translated_text': translatedText,
       'detected_language': detectedLanguage,
       'target_language': targetLanguage,
@@ -72,7 +77,9 @@ class ScanModel {
       'image_height': imageHeight,
       'created_at': createdAt.toIso8601String(),
       'updated_at': (updatedAt ?? DateTime.now()).toIso8601String(),
-      if (!forDatabase) 'is_synced': isSynced ? 1 : 0,
+      'is_synced': isSynced ? 1 : 0,
+      'additional_images_json':
+          additionalImages != null ? jsonEncode(additionalImages) : null,
     };
   }
 
@@ -82,34 +89,39 @@ class ScanModel {
       title: map['title'] as String,
       imagePath: map['image_path'] as String?,
       rawText: map['raw_text'] as String?,
+      summary: map['summary'] as String?,
       translatedText: map['translated_text'] as String?,
       detectedLanguage: map['detected_language'] as String?,
       targetLanguage: map['target_language'] as String?,
       categoryId: map['category_id'] as String?,
       entities: map['entities_json'] != null
           ? (jsonDecode(map['entities_json'] as String) as List)
-                .map((e) => EntityModel.fromMap(e as Map<String, dynamic>))
-                .toList()
+              .map((e) => EntityModel.fromMap(e as Map<String, dynamic>))
+              .toList()
           : null,
       boundingBoxes: map['bounding_boxes_json'] != null
           ? (jsonDecode(map['bounding_boxes_json'] as String) as List)
-                .map((b) => BoundingBoxModel.fromMap(b as Map<String, dynamic>))
-                .toList()
+              .map((e) => BoundingBoxModel.fromMap(e as Map<String, dynamic>))
+              .toList()
           : null,
       documentType: map['document_type'] as String?,
-      documentTypeConfidence: (map['document_type_confidence'] as num?)?.toDouble(),
+      documentTypeConfidence: map['document_type_confidence'] as double?,
       reminderSuggestion: map['reminder_suggestion'] as String?,
       suggestedReminderDate: map['suggested_reminder_date'] != null
-          ? DateTime.tryParse(map['suggested_reminder_date'] as String)
+          ? DateTime.parse(map['suggested_reminder_date'] as String)
           : null,
-      reminderDismissed: (map['reminder_dismissed'] as int?) == 1,
+      reminderDismissed: (map['reminder_dismissed'] as int? ?? 0) == 1,
       imageWidth: map['image_width'] as int?,
       imageHeight: map['image_height'] as int?,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: map['updated_at'] != null
           ? DateTime.parse(map['updated_at'] as String)
           : null,
-      isSynced: (map['is_synced'] as int?) == 1,
+      isSynced: (map['is_synced'] as int? ?? 0) == 1,
+      additionalImages: map['additional_images_json'] != null
+          ? List<String>.from(
+              jsonDecode(map['additional_images_json'] as String) as List)
+          : null,
     );
   }
 
@@ -118,6 +130,7 @@ class ScanModel {
     String? title,
     String? imagePath,
     String? rawText,
+    String? summary,
     String? translatedText,
     String? detectedLanguage,
     String? targetLanguage,
@@ -134,12 +147,14 @@ class ScanModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSynced,
+    List<String>? additionalImages,
   }) {
     return ScanModel(
       id: id ?? this.id,
       title: title ?? this.title,
       imagePath: imagePath ?? this.imagePath,
       rawText: rawText ?? this.rawText,
+      summary: summary ?? this.summary,
       translatedText: translatedText ?? this.translatedText,
       detectedLanguage: detectedLanguage ?? this.detectedLanguage,
       targetLanguage: targetLanguage ?? this.targetLanguage,
@@ -147,15 +162,18 @@ class ScanModel {
       entities: entities ?? this.entities,
       boundingBoxes: boundingBoxes ?? this.boundingBoxes,
       documentType: documentType ?? this.documentType,
-      documentTypeConfidence: documentTypeConfidence ?? this.documentTypeConfidence,
+      documentTypeConfidence:
+          documentTypeConfidence ?? this.documentTypeConfidence,
       reminderSuggestion: reminderSuggestion ?? this.reminderSuggestion,
-      suggestedReminderDate: suggestedReminderDate ?? this.suggestedReminderDate,
+      suggestedReminderDate:
+          suggestedReminderDate ?? this.suggestedReminderDate,
       reminderDismissed: reminderDismissed ?? this.reminderDismissed,
       imageWidth: imageWidth ?? this.imageWidth,
       imageHeight: imageHeight ?? this.imageHeight,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
+      additionalImages: additionalImages ?? this.additionalImages,
     );
   }
 

@@ -705,4 +705,30 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get about_copyright => '© 2026 SmartScan. Tous droits réservés.';
+
+  @override
+  String get scan_mode_selection_title => 'Choisir le mode de numérisation';
+
+  @override
+  String get scan_mode_single => 'Page unique';
+
+  @override
+  String get scan_mode_batch => 'Mode par lots';
+
+  @override
+  String get scan_mode_single_desc =>
+      'Numérisez une page et traitez-la immédiatement';
+
+  @override
+  String get scan_mode_batch_desc =>
+      'Numérisez plusieurs pages et traitez-les toutes en même temps';
+
+  @override
+  String get start_scan_button => 'Commencer la numérisation';
+
+  @override
+  String get upload_single => 'Importer depuis la galerie';
+
+  @override
+  String get upload_batch => 'Importer plusieurs images';
 }

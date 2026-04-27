@@ -13,6 +13,7 @@ import 'package:smart_scan/core/utils/page_transition_utils.dart';
 import 'package:smart_scan/features/scan/presentation/pages/text_editor_screen.dart';
 import 'package:smart_scan/core/services/export_service.dart';
 import 'package:smart_scan/core/services/database_service.dart';
+import 'package:smart_scan/features/dashboard/presentation/bloc/dashboard_bloc.dart';
 import '../bloc/history_bloc.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -158,6 +159,13 @@ class _HistoryScreenContentState extends State<_HistoryScreenContent>
               duration: Duration(seconds: 2),
             ),
           );
+
+          // Refresh global dashboard bloc
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboardEvent());
+          } catch (_) {
+            debugPrint('Warning: Could not access DashboardBloc from HistoryScreen');
+          }
         }
       } catch (e) {
         if (context.mounted) {
@@ -374,15 +382,42 @@ class _ScanCard extends StatelessWidget {
   Widget _buildThumbnail(BuildContext context) {
     if (scan.imagePath != null && scan.imagePath!.isNotEmpty) {
       try {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.file(
-            File(scan.imagePath!),
-            width: 64,
-            height: 64,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholderThumb(context),
-          ),
+        return Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                File(scan.imagePath!),
+                width: 64,
+                height: 64,
+                cacheWidth: 200, // Optimize memory for thumbnails
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _placeholderThumb(context),
+              ),
+            ),
+            if (scan.additionalImages != null &&
+                scan.additionalImages!.length > 1)
+              Positioned(
+                right: 2,
+                bottom: 2,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${scan.additionalImages!.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
       } catch (_) {}
     }
@@ -456,9 +491,30 @@ class _ScanCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           _formatDate(scan.createdAt),
-                          style:
-                              TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
                         ),
+                        if (scan.additionalImages != null &&
+                            scan.additionalImages!.length > 1) ...[
+                          const SizedBox(width: 8),
+                          Icon(Icons.copy,
+                              size: 12,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${scan.additionalImages!.length} pages',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant),
+                          ),
+                        ],
                       ],
                     ),
                     if (categoryName != null) ...[
