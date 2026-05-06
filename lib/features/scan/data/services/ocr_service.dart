@@ -7,7 +7,6 @@ import 'dart:ui' as ui;
 import 'package:uuid/uuid.dart';
 import '../../../../shared/models/bounding_box_model.dart';
 
-/// Structured OCR result containing full extraction data
 class StructuredOCRResult {
   final String fullText;
   final List<BoundingBoxModel> blocks;
@@ -29,7 +28,6 @@ class StructuredOCRResult {
     this.isMock = false,
   });
 
-  /// Get the main text region for smart crop suggestion
   Map<String, double>? getMainTextRegion() {
     if (blocks.isEmpty) return null;
 
@@ -86,7 +84,6 @@ class StructuredOCRResult {
   }
 }
 
-/// Enhanced OCR Service with structured pipeline and bounding box extraction
 class OCRService {
   static final OCRService _instance = OCRService._internal();
   factory OCRService() => _instance;
@@ -100,14 +97,12 @@ class OCRService {
     return _textRecognizer!;
   }
 
-  /// Reset the service and free native resources
   void reset() {
     debugPrint('♻️ Resetting OCRService...');
     _textRecognizer?.close();
     _textRecognizer = null;
   }
 
-  /// Main extraction method with structured result
   Future<StructuredOCRResult> extractStructuredText(
     String imagePath, {
     Map<String, dynamic>? cropZone,
@@ -120,25 +115,21 @@ class OCRService {
 
       debugPrint('🔍 [OCR] Starting pipeline for: $imagePath');
       _logInternalMemory('Pipeline Start');
-      
-      // 1. Prepare image (resize/downscale for OCR)
+
       final prepResult = await _prepareImageForOCR(imagePath);
       String processImagePath = prepResult.path;
       int imageWidth = prepResult.width;
       int imageHeight = prepResult.height;
-      
+
       _logInternalMemory('Preparation Done');
-      
-      // 2. Mock check
+
       if (isMock) {
         debugPrint('🔍 [OCR] Using Mock Data');
         return _extractStructuredTextWeb(processImagePath);
       }
 
-      // 3. Process with ML Kit
       debugPrint('🔍 [OCR] ML Kit Processing Start');
 
-      // 2. Apply crop if requested (rarely used in current flow)
       if (cropZone != null) {
         processImagePath = await _cropImage(processImagePath, cropZone);
         // Refresh dimensions for cropped image
@@ -147,16 +138,14 @@ class OCRService {
         imageHeight = croppedPreparation.height;
       }
 
-      // 3. Process with ML Kit
       final inputImage = ml_kit.InputImage.fromFilePath(processImagePath);
       final recognizer = _getRecognizer();
       final ml_kit.RecognizedText recognizedText =
           await recognizer.processImage(inputImage);
-      
+
       debugPrint('🔍 [OCR] ML Kit Done. Found ${recognizedText.blocks.length} blocks');
       _logInternalMemory('ML Kit Processing Done');
 
-      // 4. Extract structured data
       final result = _extractStructuredData(
         recognizedText,
         imageWidth,
@@ -164,20 +153,8 @@ class OCRService {
         processImagePath,
       );
 
-      // Clean up temporary resized/cropped files if they were created
-      if (processImagePath != imagePath) {
-        try {
-          final file = File(processImagePath);
-          if (await file.exists()) {
-            // We'll let the OS clean temp dir or handle it in a more global cleanup
-          }
-        } catch (_) {}
-      }
-
-      // Proactively close and reset recognizer if it's not a heavy batch
-      // This forces native memory release
       reset();
-      
+
       _logInternalMemory('Pipeline Finish');
 
       return result;
@@ -187,33 +164,20 @@ class OCRService {
     }
   }
 
-  /// Gets image dimensions without loading the full pixel buffer into Dart heap.
-  /// Uses Flutter's native-backed codec for efficiency.
-  Future<({String path, int width, int height})> _prepareImageForOCR(String path) async {
+  Future<({String path, int width, int height})> _prepareImageForOCR(
+      String path) async {
     final file = File(path);
     if (!await file.exists()) return (path: path, width: 0, height: 0);
 
     try {
       final bytes = await file.readAsBytes();
-      
-      // Use ui.instantiateImageCodec to get dimensions without decoding to raw pixels in Dart.
-      // This uses the native Skia/Impeller decoder which is MUCH more memory efficient.
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 100, targetHeight: 100);
-      final frame = await codec.getNextFrame();
-      
-      // We still need the original dimensions for normalization.
-      // Wait, instantiateImageCodec with target sizes might lose original dimensions.
-      // Let's get original dimensions first.
-      final originalCodec = await ui.instantiateImageCodec(bytes);
-      final originalFrame = await originalCodec.getNextFrame();
-      final width = originalFrame.image.width;
-      final height = originalFrame.image.height;
-      
-      // Clean up native resources immediately
-      originalFrame.image.dispose();
-      frame.image.dispose();
-      originalCodec.dispose();
-      codec.dispose();
+
+      final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      final descriptor = await ui.ImageDescriptor.encoded(buffer);
+      final width = descriptor.width;
+      final height = descriptor.height;
+      descriptor.dispose();
+      buffer.dispose();
 
       return (path: path, width: width, height: height);
     } catch (e) {
@@ -222,7 +186,6 @@ class OCRService {
     }
   }
 
-  /// Legacy method for backward compatibility
   Future<String> extractTextFromImage(
     String imagePath, {
     Map<String, dynamic>? cropZone,
@@ -231,7 +194,6 @@ class OCRService {
     return result.fullText;
   }
 
-  /// Extract structured data from ML Kit result
   StructuredOCRResult _extractStructuredData(
     ml_kit.RecognizedText recognizedText,
     int imageWidth,
@@ -337,7 +299,6 @@ class OCRService {
     );
   }
 
-  /// Normalize bounding box to 0.0-1.0 range
   Map<String, double> _normalizeBoundingBox(
     Rect? boundingBox,
     int imageWidth,
@@ -355,7 +316,6 @@ class OCRService {
     };
   }
 
-  /// Crop image based on normalized coordinates
   Future<String> _cropImage(
     String imagePath,
     Map<String, dynamic> cropZone,
@@ -369,23 +329,19 @@ class OCRService {
         return imagePath;
       }
 
-      // Extract normalized coordinates
       final topLeft = cropZone['topLeft'] as Offset;
       final bottomRight = cropZone['bottomRight'] as Offset;
 
-      // Convert normalized coordinates to pixel coordinates
       final x = (topLeft.dx * image.width).toInt();
       final y = (topLeft.dy * image.height).toInt();
       final width = ((bottomRight.dx - topLeft.dx) * image.width).toInt();
       final height = ((bottomRight.dy - topLeft.dy) * image.height).toInt();
 
-      // Ensure coordinates are valid
       final validX = x.clamp(0, image.width - 1);
       final validY = y.clamp(0, image.height - 1);
       final validWidth = width.clamp(1, image.width - validX);
       final validHeight = height.clamp(1, image.height - validY);
 
-      // Crop the image
       final croppedImage = img.copyCrop(
         image,
         x: validX,
@@ -394,7 +350,6 @@ class OCRService {
         height: validHeight,
       );
 
-      // Save cropped image to temporary file
       final dir = await imageFile.parent.createTemp('crop_');
       final tempFile = File(
         '${dir.path}/cropped_${DateTime.now().millisecondsSinceEpoch}.jpg',
@@ -408,7 +363,6 @@ class OCRService {
     }
   }
 
-  /// Mock OCR implementation for web/demo purposes
   StructuredOCRResult _extractStructuredTextWeb(String imagePath) {
     final mockText = 'SmartScan Document Processing System\n\n'
         'Date: April 2, 2026\n'

@@ -25,7 +25,6 @@ class ModelDownloadService {
   ];
 
   /// Download all translation models at startup
-  /// This ensures the app works 100% offline
   Future<void> downloadAllModels() async {
     try {
       debugPrint('📥 Starting offline translation models download...');
@@ -44,14 +43,12 @@ class ModelDownloadService {
           }
         } catch (e) {
           debugPrint('⚠️ Error downloading model for ${language.bcpCode}: $e');
-          // Continue with other models even if one fails
         }
       }
 
       debugPrint('📥 Translation models download complete!');
     } catch (e) {
       debugPrint('❌ Error downloading translation models: $e');
-      // Don't crash the app if downloads fail - user can use online
     }
   }
 

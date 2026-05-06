@@ -5,8 +5,6 @@ import 'package:smart_scan/shared/models/bounding_box_model.dart';
 import 'package:smart_scan/core/services/database_service.dart';
 import 'package:smart_scan/core/services/file_storage_service.dart';
 
-/// Repository responsible for managing scans
-/// Handles scan persistence to database and image storage
 class ScanRepository {
   static final ScanRepository _instance = ScanRepository._internal();
 
@@ -19,8 +17,6 @@ class ScanRepository {
   final DatabaseService _dbService = DatabaseService();
   final FileStorageService _fileService = FileStorageService();
 
-  /// Save a new scan with image and all metadata
-  /// Returns the scan ID if successful
   Future<String> saveScan({
     required String title,
     required String? imagePath,
@@ -44,20 +40,15 @@ class ScanRepository {
       final scanId = const Uuid().v4();
       String? savedImagePath;
 
-      // Save images to app documents directory
       if (imagePath != null && imagePath.isNotEmpty) {
         if (additionalImages != null && additionalImages.isNotEmpty) {
-          // Multi-image save
           final savedPaths = await _fileService.saveImagesForScan(
             scanId: scanId,
             sourceImagePaths: additionalImages,
           );
           savedImagePath = savedPaths.first;
-          // All images are stored in additionalImages including the primary one
-          // to maintain a consistent list.
           additionalImages = savedPaths;
         } else {
-          // Single image save
           savedImagePath = await _fileService.saveImageForScan(
             scanId: scanId,
             sourceImagePath: imagePath,
@@ -65,7 +56,6 @@ class ScanRepository {
         }
       }
 
-      // Create scan model with all fields
       final scan = ScanModel(
         id: scanId,
         title: title,
@@ -88,18 +78,13 @@ class ScanRepository {
         additionalImages: additionalImages,
       );
 
-      // Save to database
       await _dbService.insertScan(scan.toMap(forDatabase: true));
 
       return scanId;
     } catch (e) {
-      // Clean up image if database save fails
       rethrow;
     }
-  }
-
-  /// Get a scan by ID
-  Future<ScanModel?> getScan(String scanId) async {
+  }\r\n\r\n  Future<ScanModel?> getScan(String scanId) async {
     try {
       final scanMap = await _dbService.getScan(scanId);
       if (scanMap == null) return null;
@@ -110,7 +95,6 @@ class ScanRepository {
     }
   }
 
-  /// Get all scans with pagination
   Future<List<ScanModel>> getAllScans({
     int limit = 20,
     int offset = 0,
@@ -127,7 +111,6 @@ class ScanRepository {
     }
   }
 
-  /// Get scans by category
   Future<List<ScanModel>> getScansByCategory(
     String categoryId, {
     int limit = 20,
@@ -146,7 +129,6 @@ class ScanRepository {
     }
   }
 
-  /// Search scans by text query
   Future<List<ScanModel>> searchScans(
     String query, {
     int limit = 20,
@@ -165,7 +147,6 @@ class ScanRepository {
     }
   }
 
-  /// Update an existing scan
   Future<void> updateScan({
     required String scanId,
     String? title,
@@ -211,7 +192,6 @@ class ScanRepository {
     }
   }
 
-  /// Dismiss a reminder suggestion for a scan
   Future<void> dismissReminder(String scanId) async {
     try {
       await _dbService.updateScan(scanId, {'reminder_dismissed': 1});
@@ -220,20 +200,16 @@ class ScanRepository {
     }
   }
 
-  /// Delete a scan and its associated image
   Future<void> deleteScan(String scanId) async {
     try {
-      // Delete image files from storage
       await _fileService.deleteImageForScan(scanId);
 
-      // Delete scan from database
       await _dbService.deleteScan(scanId);
     } catch (e) {
       rethrow;
     }
   }
 
-  /// Get total count of scans
   Future<int> getScanCount() async {
     try {
       return await _dbService.getScanCount();
@@ -242,7 +218,6 @@ class ScanRepository {
     }
   }
 
-  /// Get storage size used by all scans
   Future<String> getStorageUsage() async {
     try {
       final bytes = await _fileService.getTotalScansSize();
@@ -252,13 +227,10 @@ class ScanRepository {
     }
   }
 
-  /// Clear all scans and their images (destructive operation)
   Future<void> deleteAllScans() async {
     try {
-      // Delete all image files
       await _fileService.clearAllScansStorage();
 
-      // Delete all scans from database
       final allScans = await getAllScans(limit: 10000);
       for (final scan in allScans) {
         await _dbService.deleteScan(scan.id);
@@ -268,8 +240,6 @@ class ScanRepository {
     }
   }
 
-  /// Verify image integrity for a scan
-  /// Returns true if image exists and is accessible
   Future<bool> verifyImageIntegrity(String scanId, String imagePath) async {
     try {
       return await _fileService.verifyImageExists(imagePath);
@@ -278,8 +248,6 @@ class ScanRepository {
     }
   }
 
-  /// Repair broken image references
-  /// Searches scan directory for image file if path is invalid
   Future<String?> repairImagePath(String scanId) async {
     try {
       return await _fileService.findImageByScanId(scanId);
@@ -289,7 +257,6 @@ class ScanRepository {
   }
 
   // ─── Saved Translations ─────────────────────────────────────────────────
-  /// Save a translation result
   Future<String> saveTranslation({
     required String sourceLanguage,
     required String targetLanguage,
@@ -313,7 +280,6 @@ class ScanRepository {
     }
   }
 
-  /// Get all saved translations
   Future<List<Map<String, dynamic>>> getAllSavedTranslations({
     int limit = 50,
     int offset = 0,
@@ -326,7 +292,6 @@ class ScanRepository {
     }
   }
 
-  /// Delete a saved translation
   Future<void> deleteSavedTranslation(String translationId) async {
     try {
       await _dbService.deleteSavedTranslation(translationId);
@@ -335,7 +300,6 @@ class ScanRepository {
     }
   }
 
-  /// Get count of saved translations
   Future<int> getSavedTranslationCount() async {
     try {
       return await _dbService.getSavedTranslationCount();

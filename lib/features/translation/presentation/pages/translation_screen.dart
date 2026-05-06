@@ -85,15 +85,10 @@ class _TranslationScreenState extends State<TranslationScreen> {
     _sourceController = TextEditingController(text: widget.initialText ?? '');
     _targetController = TextEditingController();
 
-    // Preload translator for default language pair only (in background)
-    // Avoids downloading all 9 languages which causes slowdown
     _preloadTranslator();
   }
 
-  /// Download specific language model in background WITHOUT blocking UI.
-  /// Fire-and-forget: doesn't update UI or wait for download.
   void _downloadModelInBackground(String langCode) {
-    // Use Future.delayed to ensure the task is queued properly
     Future.delayed(Duration.zero, () async {
       try {
         final modelManager = OnDeviceTranslatorModelManager();
@@ -122,8 +117,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     _languageIdentifier.close();
     super.dispose();
   }
-
-  // ─── Voice Input ──────────────────────────────────────────────────────────
 
   Future<void> _listen() async {
     if (!_isListening) {
@@ -196,8 +189,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     }
   }
 
-  // ─── Language Detection ────────────────────────────────────────────────────
-
   Future<void> _detectLanguage(String text) async {
     if (text.isEmpty) return;
 
@@ -223,8 +214,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
       setState(() => _isAutoDetecting = false);
     }
   }
-
-  // ─── Image Picking ─────────────────────────────────────────────────────────
 
   Future<void> _pickFromGallery() async {
     setState(() => _isPickingImage = true);
@@ -330,8 +319,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     );
   }
 
-  // ─── OCR ──────────────────────────────────────────────────────────────────
-
   Future<void> _runOcrOnImage(String imagePath) async {
     setState(() {
       _pickedImagePath = imagePath;
@@ -358,11 +345,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     }
   }
 
-  // ─── Preload Translator ────────────────────────────────────────────────────
-
-  /// Pre-initialize translator for the selected language pair in the background.
-  /// This ensures faster translation when the user hits "Translate".
-  /// Called when language selection changes.
   Future<void> _preloadTranslator() async {
     if (_isPreloadingTranslator) return;
 
@@ -415,11 +397,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     }
   }
 
-  // ─── Translation ──────────────────────────────────────────────────────────
-
-  /// Entry point: Smart strategy based on connectivity
-  /// - No internet: Use offline ML Kit directly (fast, no timeout)
-  /// - Has internet: Try online API first, then fall back to offline
   Future<void> _translate() async {
     final text = _sourceController.text.trim();
     if (text.isEmpty) {
@@ -441,7 +418,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
       final hasInternet = await ConnectivityService().hasInternetConnection();
 
       if (!hasInternet) {
-        // ── NO INTERNET: Use offline translation directly ──────────────────
         debugPrint('📡 No internet detected - using offline translation');
         _setStatus('⏳ Offline mode: translating…');
         result = await _translateOffline(
@@ -454,7 +430,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
         _setStatus('✓ Offline translation complete');
         await FeedbackService().onSuccess();
       } else {
-        // ── HAS INTERNET: Try online first, then offline fallback ──────────
         _setStatus('Translating…');
         try {
           debugPrint('📡 Internet available - trying online translation');
@@ -503,10 +478,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     }
   }
 
-  // ── MyMemory REST API ──────────────────────────────────────────────────────
-
-  /// Translates [text] using the free MyMemory API.
-  /// Long texts are split into ≤500-char chunks (API limit) and joined.
   Future<String> _translateViaApi(String text, String src, String tgt) async {
     const maxChunk = 490; // keep a small margin under the 500-char API limit
 
@@ -540,8 +511,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     return buffer.toString();
   }
 
-  /// Performs a single MyMemory API call for one chunk of text.
-  /// Uses short timeouts to fail fast if no internet.
   Future<String> _apiChunk(String text, String src, String tgt) async {
     final uri = Uri.https(
       'api.mymemory.translated.net',
@@ -581,10 +550,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     }
   }
 
-  // ── ML Kit offline fallback ───────────────────────────────────────────────
-
-  /// Offline fallback using on-device ML Kit models.
-  /// If models aren't available, tries to download them.
   Future<String> _translateOffline(String text, String src, String tgt) async {
     final sourceLang = _languageCodes[src]!;
     final targetLang = _languageCodes[tgt]!;
@@ -642,8 +607,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
         );
   }
 
-  // ── Save Translation ───────────────────────────────────────────────────────
-
   Future<void> _saveTranslation() async {
     if (_sourceController.text.isEmpty || _targetController.text.isEmpty) {
       _setStatus('Nothing to save - translate first', isError: true);
@@ -685,8 +648,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
       if (mounted) setState(() => _isSavingTranslation = false);
     }
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   void _setStatus(String msg, {bool isError = false}) {
     if (mounted) {
@@ -753,8 +714,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
       SnackBar(content: Text(msg), backgroundColor: Colors.red),
     );
   }
-
-  // ─── Build ────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {

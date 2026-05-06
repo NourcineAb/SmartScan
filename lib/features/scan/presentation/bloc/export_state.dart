@@ -7,12 +7,10 @@ abstract class ExportState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Initial export state
 class ExportInitial extends ExportState {
   const ExportInitial();
 }
 
-/// Export in progress
 class ExportInProgress extends ExportState {
   final String exportType; // 'pdf', 'txt', 'word'
 
@@ -22,7 +20,6 @@ class ExportInProgress extends ExportState {
   List<Object?> get props => [exportType];
 }
 
-/// Export completed successfully
 class ExportCompleted extends ExportState {
   final String filePath;
   final String exportType;
@@ -38,12 +35,10 @@ class ExportCompleted extends ExportState {
   List<Object?> get props => [filePath, exportType, message];
 }
 
-/// Loading exported files
 class ExportedFilesLoading extends ExportState {
   const ExportedFilesLoading();
 }
 
-/// Exported files loaded
 class ExportedFilesLoaded extends ExportState {
   final List<String> filePaths;
 
@@ -53,12 +48,10 @@ class ExportedFilesLoaded extends ExportState {
   List<Object?> get props => [filePaths];
 }
 
-/// Exported files list is empty
 class ExportedFilesEmpty extends ExportState {
   const ExportedFilesEmpty();
 }
 
-/// File deleted successfully
 class ExportedFileDeleted extends ExportState {
   final String message;
 
@@ -68,7 +61,6 @@ class ExportedFileDeleted extends ExportState {
   List<Object?> get props => [message];
 }
 
-/// Export error
 class ExportError extends ExportState {
   final String message;
 

@@ -55,17 +55,14 @@ abstract class DashboardState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Initial dashboard state
 class DashboardInitial extends DashboardState {
   const DashboardInitial();
 }
 
-/// Loading dashboard data
 class DashboardLoading extends DashboardState {
   const DashboardLoading();
 }
 
-/// Dashboard stats loaded successfully
 class DashboardLoaded extends DashboardState {
   final DashboardStats stats;
 
@@ -75,7 +72,6 @@ class DashboardLoaded extends DashboardState {
   List<Object?> get props => [stats];
 }
 
-/// Dashboard loading error
 class DashboardError extends DashboardState {
   final String message;
 
@@ -85,7 +81,6 @@ class DashboardError extends DashboardState {
   List<Object?> get props => [message];
 }
 
-/// Dashboard cache cleared
 class DashboardCacheCleared extends DashboardState {
   const DashboardCacheCleared();
 }

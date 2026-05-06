@@ -5,14 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 /// Singleton service for sound and haptic feedback.
-/// Reads enable/disable flags from SharedPreferences on every call so it always
-/// reflects the latest user setting without requiring a restart.
 class FeedbackService {
   static final FeedbackService _instance = FeedbackService._internal();
   factory FeedbackService() => _instance;
   FeedbackService._internal();
 
-  // One AudioPlayer per sound so overlapping sounds don't cut each other off
   AudioPlayer? _tapPlayer;
   AudioPlayer? _shutterPlayer;
   AudioPlayer? _successPlayer;
@@ -47,9 +44,7 @@ class FeedbackService {
     try {
       await player.stop();
       await player.play(AssetSource(asset), volume: 1.0);
-    } catch (_) {
-      // Never crash the UI due to audio failure
-    }
+    } catch (_) {}
   }
 
   Future<void> _haptic(HapticsType type) async {
@@ -66,7 +61,6 @@ class FeedbackService {
 
   /// Light tap — for general button presses.
   Future<void> onTap() async {
-    // We only use haptic feedback for general taps so the app isn't too noisy
     if (await _vibrationEnabled) {
       await _haptic(HapticsType.selection);
     }
@@ -108,14 +102,11 @@ class FeedbackService {
     if (await _vibrationEnabled) await _haptic(HapticsType.selection);
   }
 
-  /// Vibration toggle with conditional logic
-  /// Only plays sound when DISABLING vibration, not when enabling
+  /// Vibration toggle — plays sound when disabling, haptic when enabling.
   Future<void> onVibrationToggled(bool isEnabled) async {
     if (!isEnabled) {
-      // Disabling vibration - play sound only
       if (await _soundEnabled) _play(_getVibrationPlayer(), 'sounds/vibration.mp3');
     } else {
-      // Activating vibration - just vibrate, no sound
       if (await _vibrationEnabled) await _haptic(HapticsType.selection);
     }
   }
@@ -129,7 +120,7 @@ class FeedbackService {
     _savePlayer?.dispose();
     _deletePlayer?.dispose();
     _vibrationPlayer?.dispose();
-    
+
     _tapPlayer = null;
     _shutterPlayer = null;
     _successPlayer = null;

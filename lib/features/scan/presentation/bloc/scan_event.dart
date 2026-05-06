@@ -4,25 +4,21 @@ abstract class ScanEvent {
   const ScanEvent();
 }
 
-/// Initiates the scan process, preparing the camera
 class InitiateScanEvent extends ScanEvent {
   const InitiateScanEvent();
 }
 
-/// Triggered when an image is captured from the camera
 class ImageCapturedEvent extends ScanEvent {
   final String imagePath;
 
   const ImageCapturedEvent({required this.imagePath});
 }
 
-/// Starts the OCR (Optical Character Recognition) process
 class OCRStartedEvent extends ScanEvent {
   final String imagePath;
   const OCRStartedEvent({required this.imagePath});
 }
 
-/// Emitted when OCR is completed with extracted text
 class OCRCompletedEvent extends ScanEvent {
   final String extractedText;
   final String imagePath;
@@ -33,7 +29,6 @@ class OCRCompletedEvent extends ScanEvent {
   });
 }
 
-/// Starts the text translation process
 class TranslateTextEvent extends ScanEvent {
   final String text;
   final String targetLanguage;
@@ -44,7 +39,6 @@ class TranslateTextEvent extends ScanEvent {
   });
 }
 
-/// Emitted when translation is completed
 class TranslationCompletedEvent extends ScanEvent {
   final String translatedText;
   final String originalText;
@@ -59,7 +53,6 @@ class TranslationCompletedEvent extends ScanEvent {
   });
 }
 
-/// Triggers saving the scan with image and metadata
 class SaveScanEvent extends ScanEvent {
   final String title;
   final String imagePath;
@@ -94,7 +87,6 @@ class SaveScanEvent extends ScanEvent {
   });
 }
 
-/// Apply smart crop to image
 class ApplySmartCropEvent extends ScanEvent {
   final Map<String, double> cropRegion;
   final String imagePath;
@@ -105,14 +97,12 @@ class ApplySmartCropEvent extends ScanEvent {
   });
 }
 
-/// Dismiss reminder suggestion
 class DismissReminderEvent extends ScanEvent {
   final String scanId;
 
   const DismissReminderEvent({required this.scanId});
 }
 
-/// Re-run OCR on cropped image
 class ReprocessOCREvent extends ScanEvent {
   final String imagePath;
   final Map<String, dynamic>? cropZone;
@@ -123,12 +113,10 @@ class ReprocessOCREvent extends ScanEvent {
   });
 }
 
-/// Cancels the current scan operation
 class CancelScanEvent extends ScanEvent {
   const CancelScanEvent();
 }
 
-/// Clears the BLoC state back to initial
 class ClearStateEvent extends ScanEvent {
   const ClearStateEvent();
 }

@@ -4,7 +4,6 @@ abstract class ScanState {
   const ScanState();
 }
 
-/// Initial state - no scan in progress
 class ScanInitial extends ScanState {
   const ScanInitial();
 
@@ -16,7 +15,6 @@ class ScanInitial extends ScanState {
   int get hashCode => 0;
 }
 
-/// Ready for scan - camera can be opened
 class ScanReady extends ScanState {
   const ScanReady();
 
@@ -28,7 +26,6 @@ class ScanReady extends ScanState {
   int get hashCode => 1;
 }
 
-/// Image has been captured, ready for OCR processing
 class ScanImageCaptured extends ScanState {
   final String imagePath;
 
@@ -45,7 +42,6 @@ class ScanImageCaptured extends ScanState {
   int get hashCode => imagePath.hashCode;
 }
 
-/// OCR (text extraction) is currently in progress
 class ScanOCRInProgress extends ScanState {
   const ScanOCRInProgress();
 
@@ -57,7 +53,6 @@ class ScanOCRInProgress extends ScanState {
   int get hashCode => 2;
 }
 
-/// OCR is completed with extracted text and bounding boxes
 class ScanOCRCompleted extends ScanState {
   final String extractedText;
   final String imagePath;
@@ -95,7 +90,6 @@ class ScanOCRCompleted extends ScanState {
   int get hashCode => extractedText.hashCode ^ imagePath.hashCode;
 }
 
-/// Translation process is currently in progress
 class ScanTranslationInProgress extends ScanState {
   const ScanTranslationInProgress();
 
@@ -107,7 +101,6 @@ class ScanTranslationInProgress extends ScanState {
   int get hashCode => 3;
 }
 
-/// Translation is completed
 class ScanTranslationCompleted extends ScanState {
   final String translatedText;
   final String originalText;
@@ -139,7 +132,6 @@ class ScanTranslationCompleted extends ScanState {
       imagePath.hashCode;
 }
 
-/// Scan is being saved to database and storage
 class ScanSavingInProgress extends ScanState {
   const ScanSavingInProgress();
 
@@ -151,7 +143,6 @@ class ScanSavingInProgress extends ScanState {
   int get hashCode => 4;
 }
 
-/// Scan has been successfully saved
 class ScanSaveCompleted extends ScanState {
   final String scanId;
   final ReminderSuggestion? reminderSuggestion;
@@ -169,7 +160,6 @@ class ScanSaveCompleted extends ScanState {
   int get hashCode => 5;
 }
 
-/// Smart crop region detected and applied
 class ScanSmartCropApplied extends ScanState {
   final Map<String, double> cropRegion;
   final String imagePath;
@@ -190,7 +180,6 @@ class ScanSmartCropApplied extends ScanState {
   int get hashCode => cropRegion.hashCode;
 }
 
-/// Reminder suggestion dismissed
 class ScanReminderDismissed extends ScanState {
   final String scanId;
 
@@ -204,7 +193,6 @@ class ScanReminderDismissed extends ScanState {
   int get hashCode => 7;
 }
 
-/// Scan operation was cancelled
 class ScanCancelled extends ScanState {
   const ScanCancelled();
 
@@ -216,7 +204,6 @@ class ScanCancelled extends ScanState {
   int get hashCode => 6;
 }
 
-/// An error occurred during the scan process
 class ScanError extends ScanState {
   final String message;
 

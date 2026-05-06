@@ -287,7 +287,7 @@ class ScanBloc extends Bloc<ScanEvent, ScanState> {
   ) async {
     try {
       await scanRepository.dismissReminder(event.scanId);
-      
+
       await _analytics.logReminderDismissed(
         scanId: event.scanId,
         suggestionId: event.scanId,
@@ -326,8 +326,6 @@ class ScanBloc extends Bloc<ScanEvent, ScanState> {
 
   @override
   Future<void> close() {
-    // We don't dispose of singleton services here as they are shared across the app.
-    // They will be cleaned up by the OS when the app is terminated.
     return super.close();
   }
 

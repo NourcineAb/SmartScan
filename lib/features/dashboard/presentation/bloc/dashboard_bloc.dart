@@ -24,7 +24,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<ClearDashboardCacheEvent>(_onClearDashboardCache);
   }
 
-  /// Handle loading dashboard statistics
   Future<void> _onLoadDashboardStats(
     LoadDashboardStatsEvent event,
     Emitter<DashboardState> emit,
@@ -38,7 +37,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  /// Handle refreshing dashboard
   Future<void> _onRefreshDashboard(
     RefreshDashboardEvent event,
     Emitter<DashboardState> emit,
@@ -52,7 +50,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  /// Handle updating storage info
   Future<void> _onUpdateStorageInfo(
     UpdateStorageInfoEvent event,
     Emitter<DashboardState> emit,
@@ -67,7 +64,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  /// Handle getting scan statistics
   Future<void> _onGetScanStats(
     GetScanStatsEvent event,
     Emitter<DashboardState> emit,
@@ -82,7 +78,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  /// Handle clearing dashboard cache
   Future<void> _onClearDashboardCache(
     ClearDashboardCacheEvent event,
     Emitter<DashboardState> emit,
@@ -96,31 +91,23 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  /// Calculate all dashboard statistics
   Future<DashboardStats> _calculateDashboardStats() async {
     try {
-      // Get ALL scans for statistics calculation (unlimited)
       final allScans = await scanRepository.getAllScans(limit: 100000);
 
-      // Get total categories
       final categories = await categoryRepository.getAllCategoriesAsync();
 
-      // Calculate metrics
       final totalScans = allScans.length;
       final totalCategories = categories.length;
 
-      // Get recent scans (last 5)
       final recentScans =
           allScans.length > 5 ? allScans.sublist(0, 5) : allScans;
 
-      // Calculate language distribution
       final languageDistribution = _calculateLanguageDistribution(allScans);
       final totalLanguagesUsed = languageDistribution.keys.length;
 
-      // Calculate category distribution
       final categoryDistribution = _calculateCategoryDistribution(allScans);
 
-      // Calculate total storage used
       final totalStorage = fileStorageService.getTotalScansSize();
       final totalStorageUsed = _formatStorageSize(await totalStorage);
 
@@ -139,7 +126,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  /// Calculate language distribution from scans
   Map<String, int> _calculateLanguageDistribution(List<ScanModel> scans) {
     final distribution = <String, int>{};
 
@@ -151,7 +137,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     return distribution;
   }
 
-  /// Calculate category distribution from scans
   Map<String, int> _calculateCategoryDistribution(List<ScanModel> scans) {
     final distribution = <String, int>{};
 
@@ -165,7 +150,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     return distribution;
   }
 
-  /// Format storage size in human-readable format
   String _formatStorageSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(2)} KB';

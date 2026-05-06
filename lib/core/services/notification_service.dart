@@ -15,7 +15,6 @@ class NotificationService {
   NotificationService._internal();
 
   Future<void> initialize() async {
-    // Notifications are not supported on web
     if (kIsWeb) return;
     if (_initialized) return;
 
@@ -63,7 +62,6 @@ class NotificationService {
     required String exportFormat,
     required String filePath,
   }) async {
-    // No-op on web
     if (kIsWeb) return;
 
     await initialize();
@@ -101,13 +99,8 @@ class NotificationService {
     if (kIsWeb) return;
     await initialize();
 
-    // Ensure the date is in the future
-    if (scheduledDate.isBefore(DateTime.now())) {
-      // If it's today but time passed, or past date, don't schedule
-      // or schedule for 1 minute from now for demo purposes? 
-      // Let's just return for now.
-      return;
-    }
+    // skip past dates
+    if (scheduledDate.isBefore(DateTime.now())) return;
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -144,7 +137,7 @@ class NotificationService {
       channelDescription: 'Keeps the app alive during document scanning',
       importance: Importance.max,
       priority: Priority.max,
-      ongoing: true, // This is key for persistence
+      ongoing: true,
       autoCancel: false,
       onlyAlertOnce: true,
       showWhen: true,

@@ -19,7 +19,6 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     on<ShareExportedFileEvent>(_onShareExportedFile);
   }
 
-  /// Handle PDF export
   Future<void> _onExportToPDF(
     ExportToPDFEvent event,
     Emitter<ExportState> emit,
@@ -37,7 +36,6 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     }
   }
 
-  /// Handle TXT export
   Future<void> _onExportToTXT(
     ExportToTXTEvent event,
     Emitter<ExportState> emit,
@@ -55,7 +53,6 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     }
   }
 
-  /// Handle Word export
   Future<void> _onExportToWord(
     ExportToWordEvent event,
     Emitter<ExportState> emit,
@@ -74,7 +71,6 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     }
   }
 
-  /// Handle loading exported files
   Future<void> _onLoadExportedFiles(
     LoadExportedFilesEvent event,
     Emitter<ExportState> emit,
@@ -93,7 +89,6 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     }
   }
 
-  /// Handle file deletion
   Future<void> _onDeleteExportedFile(
     DeleteExportedFileEvent event,
     Emitter<ExportState> emit,
@@ -110,7 +105,6 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     }
   }
 
-  /// Handle clearing export message
   Future<void> _onClearExportMessage(
     ClearExportMessageEvent event,
     Emitter<ExportState> emit,
@@ -118,15 +112,12 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
     emit(const ExportInitial());
   }
 
-  /// Handle sharing an exported file
   Future<void> _onShareExportedFile(
     ShareExportedFileEvent event,
     Emitter<ExportState> emit,
   ) async {
     try {
       await exportService.shareFile(event.filePath, subject: event.subject);
-      // Keep the completed state to show share button again
-      // User can share multiple times if needed
     } catch (e) {
       emit(ExportError(message: 'Error sharing file: $e'));
     }

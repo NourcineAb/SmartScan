@@ -9,7 +9,7 @@ class CloudSyncService {
   bool _syncEnabled = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final AuthService _auth = AuthService();
-  
+
   final ValueNotifier<double?> syncProgress = ValueNotifier(null);
 
   factory CloudSyncService() {
@@ -40,9 +40,8 @@ class CloudSyncService {
   }) async {
     if (!_syncEnabled || _auth.currentUser == null) return;
     try {
-      // NOTE: Firebase Storage image uploading has been intentionally removed.
-      // Images will remain local, only metadata/text is synced.
-      
+      // image upload removed; text-only sync
+
       final scanData = {
         'id': scanId,
         'title': title,
@@ -51,7 +50,7 @@ class CloudSyncService {
         ...?additionalData,
       };
 
-      // Remove the image_path from additionalData if it was passed in so we don't push local paths to the cloud
+      // strip local path before sync
       scanData.remove('image_path');
 
       await _firestore
@@ -77,7 +76,7 @@ class CloudSyncService {
           .collection('scans')
           .doc(scanId)
           .get();
-      
+
       return doc.data();
     } catch (e) {
       print("Download scan error: \$e");
@@ -88,7 +87,7 @@ class CloudSyncService {
   /// Sync all scans with cloud
   Future<void> syncAllScans(List<Map<String, dynamic>> scans) async {
     if (!_syncEnabled || _auth.currentUser == null || scans.isEmpty) return;
-    
+
     syncProgress.value = 0.0;
     for (int i = 0; i < scans.length; i++) {
       var scan = scans[i];
@@ -101,7 +100,7 @@ class CloudSyncService {
       );
       syncProgress.value = (i + 1) / scans.length;
     }
-    
+
     // Hold 100% for a brief moment before hiding
     await Future.delayed(const Duration(milliseconds: 500));
     syncProgress.value = null;

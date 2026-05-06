@@ -13,7 +13,6 @@ class ConnectivityService {
   final _connectivity = Connectivity();
 
   /// Check if device has internet connectivity
-  /// Returns true if WiFi, mobile, or other network is available
   Future<bool> hasInternetConnection() async {
     try {
       final results = await _connectivity.checkConnectivity();
@@ -24,7 +23,6 @@ class ConnectivityService {
       return hasConnection;
     } catch (e) {
       debugPrint('⚠️ Error checking connectivity: $e');
-      // If we can't determine, assume we have internet to allow API attempts
       return true;
     }
   }
@@ -47,7 +45,6 @@ class ConnectivityService {
   }
 
   /// Watch connectivity changes in real time
-  /// Useful for showing connection status indicators
   Stream<bool> get connectivityStream {
     return _connectivity.onConnectivityChanged
         .map((result) => result != ConnectivityResult.none);

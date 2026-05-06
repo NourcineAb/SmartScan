@@ -17,7 +17,6 @@ import 'package:intl/intl.dart';
 import 'package:smart_scan/core/services/gemini_service.dart';
 import 'package:smart_scan/core/services/document_type_service.dart';
 
-/// Screen shown after OCR to let the user title + categorise + save the scan.
 class SaveScanScreen extends StatefulWidget {
   final String imagePath;
   final String extractedText;
@@ -126,14 +125,9 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
     _translatedTextController.dispose();
     _translator?.close();
 
-    // Evict the preview image from the Flutter texture cache synchronously.
-    // Using addPostFrameCallback here would defer eviction until after the next
-    // frame renders, meaning the texture lingers in memory during navigation —
-    // exactly when we can least afford it on low-RAM devices.
     _previewProvider?.evict();
     _previewProvider = null;
 
-    // Force the image cache to drop all entries right now, not next frame.
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
 
@@ -284,13 +278,12 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
           ),
         );
         FeedbackService().onSave();
-        
-        // Explicitly clear large data before popping to drop references early
+
         _textController.clear();
         _translatedTextController.clear();
         _titleController.clear();
         _aiSummary = null;
-        
+
         Navigator.of(context).pop({'saved': true, 'scanId': scanId});
       }
     } catch (e) {
@@ -438,22 +431,22 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
     try {
       final String languageCode =
           Localizations.localeOf(context).languageCode;
-          
+
       final String geminiInput = _textController.text.length > 12000
           ? '${_textController.text.substring(0, 12000)}... [Truncated]'
           : _textController.text;
-          
+
       final result = await GeminiService()
           .generateSummaryAndCategory(geminiInput, targetLanguage: languageCode);
-          
+
       if (mounted && result != null) {
         setState(() {
           _aiSummary = result['summary'];
-          
+
           if (result['category'] != null && result['category']!.isNotEmpty) {
             _suggestedCategoryName = _capitalize(result['category']!);
             _suggestedCategoryExists = false;
-            
+
             final docTypeStr = result['category']!.toLowerCase();
             for (final cat in _categories) {
               if (cat.name.toLowerCase().contains(docTypeStr) ||
@@ -563,9 +556,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
 
   Widget _buildImagePreview() {
     try {
-      // Use ResizeImage to cap the in-memory texture size for the small
-      // 200 px preview. Without this Flutter would decode and cache the full
-      // resolution bitmap even though it's only displayed at 200 px height.
       _previewProvider ??= ResizeImage(
         FileImage(File(widget.imagePath)),
         width: 800,
@@ -606,7 +596,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Image preview ──────────────────────────────────────────
             Container(
               height: 200,
               width: double.infinity,
@@ -621,7 +610,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
               ),
             ),
 
-            // ── Title ──────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -649,7 +637,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
 
             const SizedBox(height: 16),
 
-            // ── Category Picker ────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -744,7 +731,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
 
             const SizedBox(height: 16),
 
-            // ── Document Analysis Results ──────────────────────────────
             if (widget.documentType != null &&
                 widget.documentType != 'unknown')
               Padding(
@@ -770,7 +756,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
                 ),
               ),
 
-            // ── Extracted Entities ─────────────────────────────────────
             if (widget.entities != null && widget.entities!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -802,7 +787,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
 
             const SizedBox(height: 16),
 
-            // ── Extracted Text ─────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
@@ -872,7 +856,6 @@ class _SaveScanScreenState extends State<SaveScanScreen> {
 
             const SizedBox(height: 24),
 
-            // ── Optional Translation ───────────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(

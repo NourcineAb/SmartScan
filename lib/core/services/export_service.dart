@@ -11,8 +11,6 @@ import 'package:smart_scan/shared/models/scan_model.dart';
 import 'notification_service.dart';
 
 /// Service for exporting scans to various formats (PDF, TXT, DOCX).
-/// After each export a system notification is shown. Tapping the notification
-/// opens the exported file with the default app.
 class ExportService {
   static final ExportService _instance = ExportService._internal();
 
@@ -26,10 +24,19 @@ class ExportService {
     try {
       final pdf = pw.Document();
 
-      // Load fonts for Unicode support (Arabic, French, etc.)
-      final font = await PdfGoogleFonts.notoSansRegular();
-      final arabicFont = await PdfGoogleFonts.notoSansArabicRegular();
-      final boldFont = await PdfGoogleFonts.notoSansBold();
+      // Load fonts, with a fallback to built-in fonts if offline.
+      pw.Font font;
+      pw.Font arabicFont;
+      pw.Font boldFont;
+      try {
+        font = await PdfGoogleFonts.notoSansRegular();
+        arabicFont = await PdfGoogleFonts.notoSansArabicRegular();
+        boldFont = await PdfGoogleFonts.notoSansBold();
+      } catch (_) {
+        font = pw.Font.helvetica();
+        arabicFont = pw.Font.helvetica();
+        boldFont = pw.Font.helveticaBold();
+      }
 
       final baseStyle = pw.TextStyle(font: font, fontFallback: [arabicFont]);
       final headerStyle =
@@ -131,7 +138,6 @@ class ExportService {
   }
 
   /// Export scan to Word document (.docx). Returns the saved file path.
-  /// Creates a valid Open XML DOCX archive.
   Future<String> exportToWord(ScanModel scan) async {
     try {
       final bytes = _buildDocxBytes(
@@ -173,10 +179,18 @@ class ExportService {
       if (format == 'pdf') {
         final pdf = pw.Document();
 
-        // Load fonts for Unicode support
-        final font = await PdfGoogleFonts.notoSansRegular();
-        final arabicFont = await PdfGoogleFonts.notoSansArabicRegular();
-        final boldFont = await PdfGoogleFonts.notoSansBold();
+        pw.Font font;
+        pw.Font arabicFont;
+        pw.Font boldFont;
+        try {
+          font = await PdfGoogleFonts.notoSansRegular();
+          arabicFont = await PdfGoogleFonts.notoSansArabicRegular();
+          boldFont = await PdfGoogleFonts.notoSansBold();
+        } catch (_) {
+          font = pw.Font.helvetica();
+          arabicFont = pw.Font.helvetica();
+          boldFont = pw.Font.helveticaBold();
+        }
 
         final baseStyle = pw.TextStyle(font: font, fontFallback: [arabicFont]);
         final headerStyle = pw.TextStyle(

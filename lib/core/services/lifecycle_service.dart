@@ -37,8 +37,6 @@ class AppLifecycleService extends WidgetsBindingObserver {
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
-      // Skip automatic background cleanup if we've already handled it
-      // manually (e.g., during scanning) to avoid OS pressure.
       if (_isScannerActive) {
         debugPrint('⏭️ Skipping background cleanup (Scanner Active)');
         return;
@@ -61,17 +59,11 @@ class AppLifecycleService extends WidgetsBindingObserver {
     });
   }
 
-  /// Aggressively free memory BEFORE a heavy native activity starts.
-  /// Runs synchronously so memory is actually released before the
-  /// native scanner competes for the same RAM budget.
   void heavyCleanup() {
     debugPrint(
         '🚀 [CRITICAL] Performing heavy cleanup before native activity...');
     _performCleanup();
 
-    // Nudge the Dart VM to run GC by briefly allocating a large buffer
-    // and immediately discarding it. This increases the likelihood that
-    // garbage is collected before we hand control to the native activity.
     try {
       // ignore: unused_local_variable
       final _ = List.filled(1024 * 1024, 0); // 1 MB allocation triggers GC
@@ -81,16 +73,10 @@ class AppLifecycleService extends WidgetsBindingObserver {
   void _performCleanup() {
     debugPrint('🧹 Performing memory cleanup...');
 
-    // Clear image cache SYNCHRONOUSLY — never inside a post-frame callback
-    // here, because callers (especially heavyCleanup) need this to complete
-    // before the next line of code runs.
     try {
-      // Setting maximumSize to 0 forces immediate eviction of every entry,
-      // including live images that clear() alone would miss.
       PaintingBinding.instance.imageCache.maximumSize = 0;
       PaintingBinding.instance.imageCache.clear();
       PaintingBinding.instance.imageCache.clearLiveImages();
-      // Restore the limit so the cache works normally afterwards.
       PaintingBinding.instance.imageCache.maximumSize = 100;
       PaintingBinding.instance.imageCache.maximumSizeBytes =
           512 * 1024 * 1024; // 512 MB

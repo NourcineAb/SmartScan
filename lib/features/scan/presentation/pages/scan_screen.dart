@@ -14,6 +14,7 @@ import '../../../../core/services/lifecycle_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/foreground_scan_service.dart';
 import 'save_scan_screen.dart';
 
 enum ScanMode { single, batch }
@@ -29,8 +30,6 @@ class _ScanScreenState extends State<ScanScreen> {
   bool _isProcessing = false;
   ScanMode? _selectedMode;
 
-  // ── Service instances held at screen level so they can be explicitly
-  // reset between scans and on dispose, preventing cross-session leaks.
   final _ocrService = OCRService();
   final _languageService = LanguageService();
   final _entityService = EntityExtractionService();
@@ -45,9 +44,6 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   void dispose() {
-    // Explicitly reset every service when this screen is torn down.
-    // This runs synchronously and guarantees native handles are closed
-    // before Flutter's garbage collector gets involved.
     _ocrService.reset();
     _languageService.reset();
     _entityService.reset();
@@ -70,13 +66,13 @@ class _ScanScreenState extends State<ScanScreen> {
     PaintingBinding.instance.imageCache.maximumSize = 0;
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
-    
+
     // Nudge Dart GC
     try {
       // ignore: unused_local_variable
       final _ = List.filled(1024 * 1024, 0);
     } catch (_) {}
-    
+
     _logMemory('Deep Clean End');
   }
 
@@ -95,7 +91,6 @@ class _ScanScreenState extends State<ScanScreen> {
 
       if (imagePaths.isEmpty) return;
 
-      // Clear image cache and reset services before starting pipeline
       _deepCleanMemory();
       PaintingBinding.instance.imageCache.maximumSize = 50;
 
@@ -110,20 +105,14 @@ class _ScanScreenState extends State<ScanScreen> {
     DocumentScanner? documentScanner;
 
     try {
-      // ── 1. Reset all services and disable image cache BEFORE building scanner.
       _deepCleanMemory();
 
-      // Signal the lifecycle service to skip auto-cleanup during the scan
       AppLifecycleService().isScannerActive = true;
 
       _logMemory('Post-Service-Reset (Cache Disabled)');
 
-      // ── 2. Anti-Suspension: High-priority ongoing notification
-      // This is a "pseudo-foreground-service" strategy. It signals to Android (especially Samsung's BBA2)
-      // that the app is performing an active task, making it much less likely to be killed.
       try {
-        await NotificationService().showScannerNotification();
-        // Temporarily disable analytics to save memory/processing during the scan
+        await ForegroundScanService.start();
         await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(false);
       } catch (e) {
         debugPrint('Warning: Anti-suspension setup failed: $e');
@@ -132,7 +121,6 @@ class _ScanScreenState extends State<ScanScreen> {
       await Future.delayed(const Duration(milliseconds: 400));
       _logMemory('Post-GC-Delay');
 
-      // ── 3. Build the scanner and open it.
       final DocumentScannerOptions options = DocumentScannerOptions(
         mode: ScannerMode.full,
         pageLimit: mode == ScanMode.single ? 1 : 15,
@@ -151,12 +139,10 @@ class _ScanScreenState extends State<ScanScreen> {
         }
         return;
       } finally {
-        // Signal that the native activity is done so auto-cleanup can resume
         AppLifecycleService().isScannerActive = false;
-        
-        // Clean up anti-suspension measures
+
         try {
-          await NotificationService().cancelScannerNotification();
+          await ForegroundScanService.stop();
           await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
         } catch (_) {}
 
@@ -178,15 +164,14 @@ class _ScanScreenState extends State<ScanScreen> {
       result = null;
 
       if (mounted) setState(() => _isProcessing = true);
-      
+
       _logMemory('Captured ${imagePaths.length} images. Restoring Cache.');
-      
-      // Restore image cache now that we are back in the foreground
+
       PaintingBinding.instance.imageCache.maximumSize = 100;
       PaintingBinding.instance.imageCache.maximumSizeBytes = 512 * 1024 * 1024;
-      
+
       await Future.delayed(const Duration(milliseconds: 600));
-      
+
       await _runOCRPipeline(imagePaths);
     } catch (e, stack) {
       _logMemory('CRITICAL OCR PIPELINE ERROR: $e');
@@ -213,8 +198,6 @@ class _ScanScreenState extends State<ScanScreen> {
       documentScanner = null;
       _logMemory('Scanner disposed in finally');
 
-      // Hard synchronous cache clear
-      _deepCleanMemory();
       PaintingBinding.instance.imageCache.maximumSize = 100;
       PaintingBinding.instance.imageCache.maximumSizeBytes = 512 * 1024 * 1024;
     }

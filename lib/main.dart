@@ -23,7 +23,7 @@ import 'core/services/cloud_sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
   try {
     await Firebase.initializeApp();
@@ -31,13 +31,8 @@ void main() async {
     debugPrint('Firebase initialization failed: \$e');
   }
 
-  // ── Image Cache Limits ────────────────────────────────────────────────────
-  // Keep these conservative on budget devices. The ML Kit document scanner
-  // is a RAM-heavy native activity; leaving too much headroom for Flutter's
-  // image cache means there is less RAM available when the scanner launches.
-  PaintingBinding.instance.imageCache.maximumSize = 20; // Lower limit for stable startup
-  PaintingBinding.instance.imageCache.maximumSizeBytes =
-      15 * 1024 * 1024; // 15 MB (was 50 MB)
+  PaintingBinding.instance.imageCache.maximumSize = 20;
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 15 * 1024 * 1024;
 
   // Initialize Lifecycle Service for global cleanup
   AppLifecycleService().initialize();
@@ -70,10 +65,6 @@ void main() async {
   // Initialize haptic and sound managers
   await VibrationManager().initialize(prefs);
   await SoundManager().initialize(prefs);
-
-  // Removed automatic model downloads at startup to conserve memory.
-  // Models will be downloaded on demand in TranslationScreen.
-
 
   runApp(
     MultiBlocProvider(

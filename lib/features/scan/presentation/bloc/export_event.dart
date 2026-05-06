@@ -7,7 +7,6 @@ abstract class ExportEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Event to export scan to PDF
 class ExportToPDFEvent extends ExportEvent {
   final ScanModel scan;
 
@@ -17,7 +16,6 @@ class ExportToPDFEvent extends ExportEvent {
   List<Object?> get props => [scan];
 }
 
-/// Event to export scan to TXT
 class ExportToTXTEvent extends ExportEvent {
   final ScanModel scan;
 
@@ -27,7 +25,6 @@ class ExportToTXTEvent extends ExportEvent {
   List<Object?> get props => [scan];
 }
 
-/// Event to export scan to Word
 class ExportToWordEvent extends ExportEvent {
   final ScanModel scan;
 
@@ -37,12 +34,10 @@ class ExportToWordEvent extends ExportEvent {
   List<Object?> get props => [scan];
 }
 
-/// Event to load exported files
 class LoadExportedFilesEvent extends ExportEvent {
   const LoadExportedFilesEvent();
 }
 
-/// Event to delete an exported file
 class DeleteExportedFileEvent extends ExportEvent {
   final String filePath;
 
@@ -52,12 +47,10 @@ class DeleteExportedFileEvent extends ExportEvent {
   List<Object?> get props => [filePath];
 }
 
-/// Event to clear export message
 class ClearExportMessageEvent extends ExportEvent {
   const ClearExportMessageEvent();
 }
 
-/// Event to share an exported file
 class ShareExportedFileEvent extends ExportEvent {
   final String filePath;
   final String subject;

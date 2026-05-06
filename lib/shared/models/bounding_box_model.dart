@@ -1,5 +1,4 @@
 /// Represents a normalized bounding box for text extraction
-/// Coordinates are in normalized form (0.0 to 1.0) relative to image dimensions
 class BoundingBoxModel {
   final String id;
   final String text;
@@ -27,24 +26,19 @@ class BoundingBoxModel {
     this.elementIndex,
   });
 
-  /// Get width of the bounding box
   double get width => right - left;
 
-  /// Get height of the bounding box
   double get height => bottom - top;
 
-  /// Get center point of the bounding box
   Map<String, double> get center => {
         'x': (left + right) / 2,
         'y': (top + bottom) / 2,
       };
 
-  /// Check if a point is inside this bounding box
   bool containsPoint(double x, double y) {
     return x >= left && x <= right && y >= top && y <= bottom;
   }
 
-  /// Scale the bounding box to actual pixel coordinates
   BoundingBoxModel scaleToSize(double imageWidth, double imageHeight) {
     return BoundingBoxModel(
       id: id,
@@ -61,7 +55,6 @@ class BoundingBoxModel {
     );
   }
 
-  /// Normalize pixel coordinates to 0.0-1.0 range
   BoundingBoxModel normalize(double imageWidth, double imageHeight) {
     return BoundingBoxModel(
       id: id,
@@ -144,7 +137,6 @@ class BoundingBoxModel {
   }
 }
 
-/// Result of OCR processing containing all extracted data
 class OCRResult {
   final String fullText;
   final List<BoundingBoxModel> blocks;
@@ -162,7 +154,6 @@ class OCRResult {
     required this.imageHeight,
   });
 
-  /// Get the main text region (smart crop suggestion)
   Map<String, double>? getMainTextRegion() {
     if (blocks.isEmpty) return null;
 

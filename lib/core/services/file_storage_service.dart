@@ -20,7 +20,6 @@ class FileStorageService {
     final appDocDir = await getApplicationDocumentsDirectory();
     final scansDir = Directory(path.join(appDocDir.path, _scansDirectory));
 
-    // Create directory if it doesn't exist
     if (!await scansDir.exists()) {
       await scansDir.create(recursive: true);
     }
@@ -33,7 +32,6 @@ class FileStorageService {
     final scansDir = await _getScansDir();
     final scanDir = Directory(path.join(scansDir.path, scanId));
 
-    // Create directory if it doesn't exist
     if (!await scanDir.exists()) {
       await scanDir.create(recursive: true);
     }
