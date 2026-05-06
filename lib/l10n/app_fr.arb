@@ -261,5 +261,25 @@
   "scan_mode_batch_desc": "Numérisez plusieurs pages et traitez-les toutes en même temps",
   "start_scan_button": "Commencer la numérisation",
   "upload_single": "Importer depuis la galerie",
-  "upload_batch": "Importer plusieurs images"
+  "upload_batch": "Importer plusieurs images",
+
+  "settings_account_sync": "Compte et synchronisation",
+  "settings_sign_in": "Se connecter",
+  "settings_sign_in_desc": "Connectez-vous pour synchroniser vos scans sur tous vos appareils",
+  "settings_continue_google": "Continuer avec Google",
+  "settings_sign_in_success": "Connexion réussie !",
+  "settings_sign_out": "Se déconnecter",
+  "settings_sign_out_success": "Déconnexion réussie",
+  "settings_cloud_sync_label": "Synchronisation cloud",
+  "settings_sync_enabled_msg": "Synchronisation activée",
+
+  "settings_generative_ai": "IA générative",
+  "settings_gemini_api_key": "Clé API Gemini",
+  "settings_gemini_desc": "Activer l'analyse intelligente et l'extraction de données",
+  "settings_enter_gemini_key": "Entrez votre clé API Google Gemini",
+  "settings_configure_api_key": "Configurer la clé API",
+  "settings_vibration": "Vibration",
+  "settings_vibration_desc": "Retours haptiques lors des actions",
+  "settings_lock_orientation": "Verrouiller l'orientation",
+  "settings_lock_orientation_desc": "Maintenir l'application en mode portrait"
 }

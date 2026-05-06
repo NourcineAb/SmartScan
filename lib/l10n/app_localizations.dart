@@ -1473,6 +1473,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upload multiple images'**
   String get upload_batch;
+
+  /// No description provided for @settings_account_sync.
+  ///
+  /// In en, this message translates to:
+  /// **'Account & Sync'**
+  String get settings_account_sync;
+
+  /// No description provided for @settings_sign_in.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get settings_sign_in;
+
+  /// No description provided for @settings_sign_in_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to sync your scans across devices'**
+  String get settings_sign_in_desc;
+
+  /// No description provided for @settings_continue_google.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get settings_continue_google;
+
+  /// No description provided for @settings_sign_in_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully signed in!'**
+  String get settings_sign_in_success;
+
+  /// No description provided for @settings_sign_out.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get settings_sign_out;
+
+  /// No description provided for @settings_sign_out_success.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully signed out'**
+  String get settings_sign_out_success;
+
+  /// No description provided for @settings_cloud_sync_label.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Sync'**
+  String get settings_cloud_sync_label;
+
+  /// No description provided for @settings_sync_enabled_msg.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync enabled'**
+  String get settings_sync_enabled_msg;
+
+  /// No description provided for @settings_generative_ai.
+  ///
+  /// In en, this message translates to:
+  /// **'Generative AI'**
+  String get settings_generative_ai;
+
+  /// No description provided for @settings_gemini_api_key.
+  ///
+  /// In en, this message translates to:
+  /// **'Gemini API Key'**
+  String get settings_gemini_api_key;
+
+  /// No description provided for @settings_gemini_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable smart parsing & data extraction'**
+  String get settings_gemini_desc;
+
+  /// No description provided for @settings_enter_gemini_key.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your Google Gemini API Key'**
+  String get settings_enter_gemini_key;
+
+  /// No description provided for @settings_configure_api_key.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure API Key'**
+  String get settings_configure_api_key;
+
+  /// No description provided for @settings_vibration.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibration'**
+  String get settings_vibration;
+
+  /// No description provided for @settings_vibration_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Haptic feedback for actions'**
+  String get settings_vibration_desc;
+
+  /// No description provided for @settings_lock_orientation.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock Orientation'**
+  String get settings_lock_orientation;
+
+  /// No description provided for @settings_lock_orientation_desc.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep app in portrait mode'**
+  String get settings_lock_orientation_desc;
 }
 
 class _AppLocalizationsDelegate

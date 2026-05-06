@@ -7,6 +7,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/services/feedback_service.dart';
 import '../../../../core/services/gemini_service.dart';
+import '../../../../core/services/auth_service.dart';
+import '../../../../core/services/cloud_sync_service.dart';
+import '../../../../core/services/database_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -33,6 +37,7 @@ class SettingsScreen extends StatelessWidget {
                 _buildThemeSection(context, state),
                 _buildLanguageSection(context, state),
                 _buildAISection(context),
+                _buildAccountSection(context),
                 _buildFeaturesSection(context, state),
                 const SizedBox(height: 32),
               ],
@@ -113,12 +118,12 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildAISection(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return _SettingsSection(
-      title: 'Generative AI',
+      title: l10n?.settings_generative_ai ?? 'Generative AI',
       icon: Icons.auto_awesome,
       children: [
         _SettingsCard(
-          title: 'Gemini API Key',
-          subtitle: 'Enable smart parsing & data extraction',
+          title: l10n?.settings_gemini_api_key ?? 'Gemini API Key',
+          subtitle: l10n?.settings_gemini_desc ?? 'Enable smart parsing & data extraction',
           trailing: const Icon(Icons.chevron_right),
           child: InkWell(
             onTap: () async {
@@ -130,36 +135,36 @@ class SettingsScreen extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Gemini API Key'),
+                  title: Text(l10n?.settings_gemini_api_key ?? 'Gemini API Key'),
                   content: TextField(
                     controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your Google Gemini API Key',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: l10n?.settings_enter_gemini_key ?? 'Enter your Google Gemini API Key',
+                      border: const OutlineInputBorder(),
                     ),
                     obscureText: true,
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(l10n?.cancel ?? 'Cancel'),
                     ),
                     ElevatedButton(
                       onPressed: () async {
                         await GeminiService().setApiKey(controller.text);
                         if (context.mounted) Navigator.pop(context);
                       },
-                      child: const Text('Save'),
+                      child: Text(l10n?.save ?? 'Save'),
                     ),
                   ],
                 ),
               );
             },
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: Text(
-                'Configure API Key',
-                style: TextStyle(
+                l10n?.settings_configure_api_key ?? 'Configure API Key',
+                style: const TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -168,6 +173,140 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAccountSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return StreamBuilder<User?>(
+      stream: AuthService().authStateChanges,
+      builder: (context, snapshot) {
+        final user = snapshot.data;
+        final isLoggedIn = user != null;
+
+        return _SettingsSection(
+          title: l10n?.settings_account_sync ?? 'Account & Sync',
+          icon: Icons.account_circle,
+          children: [
+            if (!isLoggedIn)
+              _SettingsCard(
+                title: l10n?.settings_sign_in ?? 'Sign In',
+                subtitle: l10n?.settings_sign_in_desc ?? 'Sign in to sync your scans across devices',
+                trailing: const Icon(Icons.login),
+                child: InkWell(
+                  onTap: () async {
+                    await FeedbackService().onTap();
+                    final userCredential = await AuthService().signInWithGoogle();
+                    if (userCredential != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n?.settings_sign_in_success ?? 'Successfully signed in!')),
+                      );
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      l10n?.settings_continue_google ?? 'Continue with Google',
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (isLoggedIn)
+              _SettingsCard(
+                title: user.displayName ?? l10n?.settings_account_sync ?? 'Account',
+                subtitle: user.email ?? '',
+                trailing: const Icon(Icons.logout),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: () async {
+                        await FeedbackService().onTap();
+                        await AuthService().signOut();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n?.settings_sign_out_success ?? 'Successfully signed out')),
+                          );
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          l10n?.settings_sign_out ?? 'Sign Out',
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Divider(),
+                    StatefulBuilder(
+                      builder: (context, setState) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(l10n?.settings_cloud_sync_label ?? 'Cloud Sync'),
+                                Switch(
+                                  value: CloudSyncService().cloudSyncEnabled,
+                                  onChanged: (value) async {
+                                    await FeedbackService().onTap();
+                                    CloudSyncService().setCloudSyncEnabled(value);
+                                    setState(() {});
+                                    if (value) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(l10n?.settings_sync_enabled_msg ?? 'Sync enabled')),
+                                      );
+                                      // Trigger initial sync
+                                      final scans = await DatabaseService().getAllScans();
+                                      CloudSyncService().syncAllScans(scans);
+                                    }
+                                  },
+                                  activeThumbColor: AppColors.primary,
+                                ),
+                              ],
+                            ),
+                            ValueListenableBuilder<double?>(
+                              valueListenable: CloudSyncService().syncProgress,
+                              builder: (context, progress, child) {
+                                if (progress == null) return const SizedBox.shrink();
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                                      child: Text(
+                                        l10n?.syncing ?? 'Syncing...',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ),
+                                    LinearProgressIndicator(
+                                      value: progress,
+                                      backgroundColor: Colors.grey[200],
+                                      color: AppColors.primary,
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -190,8 +329,8 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SettingsCard(
-          title: 'Vibration',
-          subtitle: 'Haptic feedback for actions',
+          title: l10n?.settings_vibration ?? 'Vibration',
+          subtitle: l10n?.settings_vibration_desc ?? 'Haptic feedback for actions',
           trailing: Switch(
             value: state.vibrationEnabled,
             onChanged: (value) async {
@@ -214,8 +353,8 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SettingsCard(
-          title: 'Lock Orientation',
-          subtitle: 'Keep app in portrait mode',
+          title: l10n?.settings_lock_orientation ?? 'Lock Orientation',
+          subtitle: l10n?.settings_lock_orientation_desc ?? 'Keep app in portrait mode',
           trailing: StatefulBuilder(
             builder: (context, setState) {
               return FutureBuilder<bool>(

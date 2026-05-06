@@ -731,4 +731,61 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get upload_batch => 'Importer plusieurs images';
+
+  @override
+  String get settings_account_sync => 'Compte et synchronisation';
+
+  @override
+  String get settings_sign_in => 'Se connecter';
+
+  @override
+  String get settings_sign_in_desc =>
+      'Connectez-vous pour synchroniser vos scans sur tous vos appareils';
+
+  @override
+  String get settings_continue_google => 'Continuer avec Google';
+
+  @override
+  String get settings_sign_in_success => 'Connexion réussie !';
+
+  @override
+  String get settings_sign_out => 'Se déconnecter';
+
+  @override
+  String get settings_sign_out_success => 'Déconnexion réussie';
+
+  @override
+  String get settings_cloud_sync_label => 'Synchronisation cloud';
+
+  @override
+  String get settings_sync_enabled_msg => 'Synchronisation activée';
+
+  @override
+  String get settings_generative_ai => 'IA générative';
+
+  @override
+  String get settings_gemini_api_key => 'Clé API Gemini';
+
+  @override
+  String get settings_gemini_desc =>
+      'Activer l\'analyse intelligente et l\'extraction de données';
+
+  @override
+  String get settings_enter_gemini_key => 'Entrez votre clé API Google Gemini';
+
+  @override
+  String get settings_configure_api_key => 'Configurer la clé API';
+
+  @override
+  String get settings_vibration => 'Vibration';
+
+  @override
+  String get settings_vibration_desc => 'Retours haptiques lors des actions';
+
+  @override
+  String get settings_lock_orientation => 'Verrouiller l\'orientation';
+
+  @override
+  String get settings_lock_orientation_desc =>
+      'Maintenir l\'application en mode portrait';
 }

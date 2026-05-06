@@ -713,8 +713,64 @@ class AppLocalizationsAr extends AppLocalizations {
   String get start_scan_button => 'ابدأ المسح';
 
   @override
-  String get upload_single => 'Upload from Gallery';
+  String get upload_single => 'رفع من المعرض';
 
   @override
-  String get upload_batch => 'Upload multiple images';
+  String get upload_batch => 'رفع صور متعددة';
+
+  @override
+  String get settings_account_sync => 'الحساب والمزامنة';
+
+  @override
+  String get settings_sign_in => 'تسجيل الدخول';
+
+  @override
+  String get settings_sign_in_desc =>
+      'سجل الدخول لمزامنة الفحوصات عبر جميع أجهزتك';
+
+  @override
+  String get settings_continue_google => 'المتابعة باستخدام Google';
+
+  @override
+  String get settings_sign_in_success => 'تم تسجيل الدخول بنجاح!';
+
+  @override
+  String get settings_sign_out => 'تسجيل الخروج';
+
+  @override
+  String get settings_sign_out_success => 'تم تسجيل الخروج بنجاح';
+
+  @override
+  String get settings_cloud_sync_label => 'المزامنة السحابية';
+
+  @override
+  String get settings_sync_enabled_msg => 'تم تفعيل المزامنة';
+
+  @override
+  String get settings_generative_ai => 'الذكاء الاصطناعي التوليدي';
+
+  @override
+  String get settings_gemini_api_key => 'مفتاح واجهة Gemini';
+
+  @override
+  String get settings_gemini_desc => 'تفعيل التحليل الذكي واستخراج البيانات';
+
+  @override
+  String get settings_enter_gemini_key =>
+      'أدخل مفتاح واجهة برمجة تطبيقات Google Gemini';
+
+  @override
+  String get settings_configure_api_key => 'إعداد مفتاح واجهة برمجة التطبيقات';
+
+  @override
+  String get settings_vibration => 'الاهتزاز';
+
+  @override
+  String get settings_vibration_desc => 'ردود اللمس للإجراءات';
+
+  @override
+  String get settings_lock_orientation => 'قفل الاتجاه';
+
+  @override
+  String get settings_lock_orientation_desc => 'إبقاء التطبيق في الوضع الرأسي';
 }

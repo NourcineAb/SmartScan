@@ -262,5 +262,25 @@
   "scan_mode_batch_desc": "Scan multiple pages and process them all at once",
   "start_scan_button": "Start Scanning",
   "upload_single": "Upload from Gallery",
-  "upload_batch": "Upload multiple images"
+  "upload_batch": "Upload multiple images",
+
+  "settings_account_sync": "Account & Sync",
+  "settings_sign_in": "Sign In",
+  "settings_sign_in_desc": "Sign in to sync your scans across devices",
+  "settings_continue_google": "Continue with Google",
+  "settings_sign_in_success": "Successfully signed in!",
+  "settings_sign_out": "Sign Out",
+  "settings_sign_out_success": "Successfully signed out",
+  "settings_cloud_sync_label": "Cloud Sync",
+  "settings_sync_enabled_msg": "Sync enabled",
+
+  "settings_generative_ai": "Generative AI",
+  "settings_gemini_api_key": "Gemini API Key",
+  "settings_gemini_desc": "Enable smart parsing & data extraction",
+  "settings_enter_gemini_key": "Enter your Google Gemini API Key",
+  "settings_configure_api_key": "Configure API Key",
+  "settings_vibration": "Vibration",
+  "settings_vibration_desc": "Haptic feedback for actions",
+  "settings_lock_orientation": "Lock Orientation",
+  "settings_lock_orientation_desc": "Keep app in portrait mode"
 }

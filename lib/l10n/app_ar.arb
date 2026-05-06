@@ -258,5 +258,27 @@
   "scan_mode_batch": "وضع الدفعات",
   "scan_mode_single_desc": "مسح صفحة واحدة ومعالجتها على الفور",
   "scan_mode_batch_desc": "مسح صفحات متعددة ومعالجتها جميعاً مرة واحدة",
-  "start_scan_button": "ابدأ المسح"
+  "start_scan_button": "ابدأ المسح",
+  "upload_single": "رفع من المعرض",
+  "upload_batch": "رفع صور متعددة",
+
+  "settings_account_sync": "الحساب والمزامنة",
+  "settings_sign_in": "تسجيل الدخول",
+  "settings_sign_in_desc": "سجل الدخول لمزامنة الفحوصات عبر جميع أجهزتك",
+  "settings_continue_google": "المتابعة باستخدام Google",
+  "settings_sign_in_success": "تم تسجيل الدخول بنجاح!",
+  "settings_sign_out": "تسجيل الخروج",
+  "settings_sign_out_success": "تم تسجيل الخروج بنجاح",
+  "settings_cloud_sync_label": "المزامنة السحابية",
+  "settings_sync_enabled_msg": "تم تفعيل المزامنة",
+
+  "settings_generative_ai": "الذكاء الاصطناعي التوليدي",
+  "settings_gemini_api_key": "مفتاح واجهة Gemini",
+  "settings_gemini_desc": "تفعيل التحليل الذكي واستخراج البيانات",
+  "settings_enter_gemini_key": "أدخل مفتاح واجهة برمجة تطبيقات Google Gemini",
+  "settings_configure_api_key": "إعداد مفتاح واجهة برمجة التطبيقات",
+  "settings_vibration": "الاهتزاز",
+  "settings_vibration_desc": "ردود اللمس للإجراءات",
+  "settings_lock_orientation": "قفل الاتجاه",
+  "settings_lock_orientation_desc": "إبقاء التطبيق في الوضع الرأسي"
 }

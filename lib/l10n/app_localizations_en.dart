@@ -719,4 +719,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get upload_batch => 'Upload multiple images';
+
+  @override
+  String get settings_account_sync => 'Account & Sync';
+
+  @override
+  String get settings_sign_in => 'Sign In';
+
+  @override
+  String get settings_sign_in_desc =>
+      'Sign in to sync your scans across devices';
+
+  @override
+  String get settings_continue_google => 'Continue with Google';
+
+  @override
+  String get settings_sign_in_success => 'Successfully signed in!';
+
+  @override
+  String get settings_sign_out => 'Sign Out';
+
+  @override
+  String get settings_sign_out_success => 'Successfully signed out';
+
+  @override
+  String get settings_cloud_sync_label => 'Cloud Sync';
+
+  @override
+  String get settings_sync_enabled_msg => 'Sync enabled';
+
+  @override
+  String get settings_generative_ai => 'Generative AI';
+
+  @override
+  String get settings_gemini_api_key => 'Gemini API Key';
+
+  @override
+  String get settings_gemini_desc => 'Enable smart parsing & data extraction';
+
+  @override
+  String get settings_enter_gemini_key => 'Enter your Google Gemini API Key';
+
+  @override
+  String get settings_configure_api_key => 'Configure API Key';
+
+  @override
+  String get settings_vibration => 'Vibration';
+
+  @override
+  String get settings_vibration_desc => 'Haptic feedback for actions';
+
+  @override
+  String get settings_lock_orientation => 'Lock Orientation';
+
+  @override
+  String get settings_lock_orientation_desc => 'Keep app in portrait mode';
 }

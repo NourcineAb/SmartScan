@@ -1,19 +1,4 @@
-// Stub Firebase options for web compatibility
-class FirebaseOptions {
-  final String apiKey;
-  final String appId;
-  final String messagingSenderId;
-  final String projectId;
-  final String storageBucket;
-
-  const FirebaseOptions({
-    required this.apiKey,
-    required this.appId,
-    required this.messagingSenderId,
-    required this.projectId,
-    required this.storageBucket,
-  });
-}
+import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 
 class DefaultFirebaseOptions {
   static const FirebaseOptions currentPlatform = FirebaseOptions(

@@ -18,6 +18,8 @@ import 'features/scan/data/repositories/scan_repository.dart';
 import 'features/categorization/data/repositories/category_repository.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'core/services/cloud_sync_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +28,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
+    debugPrint('Firebase initialization failed: \$e');
   }
 
   // ── Image Cache Limits ────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ void main() async {
   AppLifecycleService().initialize();
 
   final prefs = await SharedPreferences.getInstance();
+  await CloudSyncService().initialize(prefs);
 
   // Set orientation based on preference (default: portrait locked)
   final isOrientationLocked = prefs.getBool('lock_orientation') ?? true;
